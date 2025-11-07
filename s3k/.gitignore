@@ -1,0 +1,13 @@
+docs
+*.a
+*.da
+*.o
+*.d
+*.su
+*.out
+*.elf
+*.bin
+*.hex
+*.res
+compile_commands.json
+.cache
