@@ -6,7 +6,16 @@
 
 #include "../../tutorial-commons/utils.h"
 
-void setup_other_app()
+#define APP_B_BASE_ADDR 0x80020100
+
+#define APP_1_SIZE 0x20000
+
+/* 
+	This process works like a server, that allows the other process
+	(process A) to execute another process from the file system (process B)
+*/
+
+void setup_other_app_a()
 {
 	uint64_t uart_addr = s3k_napot_encode(UART0_BASE_ADDR, 0x8);
 	uint64_t app1_addr = s3k_napot_encode(APP_1_BASE_ADDR, APP_1_SIZE);
@@ -30,7 +39,7 @@ void setup_other_app()
 	s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, APP_1_CAP_PMP_UART);
 	s3k_mon_pmp_load(MONITOR, APP1_PID, APP_1_CAP_PMP_UART, APP_1_PMP_SLOT_UART);
 
-	// Write start PC of app1 to PC
+	// Write start PC of app1 to PC (so that App1 will start at the correct position)
 	s3k_mon_reg_write(MONITOR, APP1_PID, S3K_REG_PC, APP_1_BASE_ADDR);
 
 	s3k_sync_mem();
@@ -45,9 +54,12 @@ int main(void)
 	FATFS FatFs;					/* FatFs work area needed for each volume */
 	f_mount(&FatFs, "", 0);			/* Give a work area to the default drive */
 	alt_printf("0> File system mounted\n");
+	alt_printf("0> APP_1_SIZE: %x\n", APP_1_SIZE);
+	alt_printf("0> APP_B_POS: %x\n", APP_B_BASE_ADDR);
+
 
 	// Setup app1 capabilities and PC
-	setup_other_app();
+	setup_other_app_a();
 	setup_scheduling(ROUND_ROBIN);
 	uint32_t socket = setup_socket(true, true, false);
 
@@ -57,12 +69,17 @@ int main(void)
 	s3k_msg_t msg;
 	s3k_reply_t reply;
 
-	while (1) {
+	for (;;) {
+		// Wait for non erronous responce
 		do {
 			reply = s3k_sock_sendrecv(socket, &msg);
 		} while (reply.err);
+
+		// Then run the program in reply
 		alt_puts("0> hello\n");
 		alt_printf("0> file %s\n", (char *)reply.data);
+		
+		// Stop app a
 		s3k_mon_suspend(MONITOR, APP1_PID);
 
 		UINT bw;
@@ -77,8 +94,12 @@ int main(void)
 			fr = f_close(&Fil);							/* Close the file */
 			if (fr == FR_OK) {
 				alt_puts("0> Booting app1 \n");
-				memcpy((void*)APP_1_BASE_ADDR,buffer, 1024);
-				s3k_mon_reg_write(MONITOR, APP1_PID, S3K_REG_PC, APP_1_BASE_ADDR); //reset the PC to the initial address
+				
+				// Replace AppA code with AppB
+				memcpy((void*)APP_B_BASE_ADDR, buffer, 1024);
+
+				// reset the PC to the initial address (for appB to start running at the correct position)
+				s3k_mon_reg_write(MONITOR, APP1_PID, S3K_REG_PC, APP_B_BASE_ADDR); // <--
 				s3k_mon_resume(MONITOR, APP1_PID);
 			}
 			else {

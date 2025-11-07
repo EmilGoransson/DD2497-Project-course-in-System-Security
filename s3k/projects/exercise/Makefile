@@ -7,10 +7,14 @@ export S3K_CONF_H :=${abspath s3k_conf.h}
 
 include ${ROOT}/tools.mk
 
-APPS=app0 app1 app2
+APPS=app0 appA appB
 
+# Loads all apps defined in APPS
 ELFS:=${patsubst %, ${BUILD}/%.elf, kernel ${APPS}}
-INIT_ELFS:=${patsubst %, ${BUILD}/%.elf, kernel app0 app1}
+
+# Only load app0 and appA to the memory at boot. If appB was also loaded 
+# it would overwrite appA since it uses the same address space
+INIT_ELFS:=${patsubst %, ${BUILD}/%.elf, kernel app0 appA }
 
 all: kernel ${APPS}
 
@@ -41,7 +45,7 @@ gdb-openocd: kernel ${APPS}
 disk-image: ${APPS}
 	qemu-img create fs.img 10M
 	mformat -i fs.img ::
-	mcopy -i fs.img build/qemu_virt4/app2.bin ::/app2.bin
+	mcopy -i fs.img build/qemu_virt4/appB.bin ::/appB.bin
 
 disk-read:
 	mdir -i fs.img
