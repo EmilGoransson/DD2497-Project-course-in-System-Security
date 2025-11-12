@@ -3,3 +3,4 @@ MEMORY {
 }
 
 __stack_size = 1024;
+__heap_size = 1024;

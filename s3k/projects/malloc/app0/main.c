@@ -1,6 +1,8 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 
+#include "malloc.h"
+
 #define APP0_PID 0
 #define APP1_PID 1
 
@@ -61,6 +63,17 @@ int main(void)
 	
 	// Setup UART access
 	setup_uart(10);
+
+	s3k_init_malloc();
+	
+	int* dynamic_ints_a = s3k_simple_malloc(4*sizeof(int));
+	int* dynamic_ints_b = s3k_simple_malloc(4*sizeof(int));
+	s3k_simple_free(dynamic_ints_b);
+	int* dynamic_ints_c = s3k_simple_malloc(4*sizeof(int));
+
+	alt_printf("Position of dyn int a: 0x%x\n\n", dynamic_ints_a);
+	alt_printf("Position of dyn int b: 0x%x\n\n", dynamic_ints_b);
+	alt_printf("Position of dyn int c: 0x%x\n\n", dynamic_ints_c);
 
 	alt_printf("Heap pointer value: %x\n", &__heap_pointer);
 
