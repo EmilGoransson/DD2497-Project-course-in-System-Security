@@ -30,6 +30,7 @@ SECTIONS {
 	.heap : ALIGN(8){
 		__heap_pointer = .;
 		. += 1024;
+		__canary_pointer = .;
         _end = .;
     }
 

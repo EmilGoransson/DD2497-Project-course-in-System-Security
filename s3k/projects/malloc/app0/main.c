@@ -17,6 +17,8 @@
 #define CHANNEL 9
 
 extern int __heap_pointer;
+extern int __canary_pointer;
+extern int _end;
 
 void setup_uart(uint64_t uart_idx)
 {
@@ -62,7 +64,13 @@ int main(void)
 	// Setup UART access
 	setup_uart(10);
 
-	alt_printf("Heap pointer value: %x\n", &__heap_pointer);
+	alt_printf("Heap pointer address: %x\n", &__heap_pointer);
+	alt_printf("canary pointer address: %x\n", &__canary_pointer);
+	alt_printf("end pointer address: %x\n", &_end);
+
+	__canary_pointer = 200000000000;
+	alt_printf("canary pointer value: %d\n", __canary_pointer);
+
 
 	// Setup app1 capabilities and PC
 	setup_app1(11);
