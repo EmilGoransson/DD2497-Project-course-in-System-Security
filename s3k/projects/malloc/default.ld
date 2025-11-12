@@ -27,6 +27,12 @@ SECTIONS {
 		_end = .;
 	} > RAM
 
+	.heap : ALIGN(8){
+        . += 1024;
+		__heap_pointer = .;
+        _end = .;
+    } > RAM
+
 	.stack : ALIGN(8) {
 		. += __stack_size;
 		__stack_pointer = .;

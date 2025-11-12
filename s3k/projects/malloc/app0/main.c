@@ -16,6 +16,8 @@
 #define MONITOR 8
 #define CHANNEL 9
 
+extern int __heap_pointer;
+
 void setup_uart(uint64_t uart_idx)
 {
 	uint64_t uart_addr = s3k_napot_encode(UART0_BASE_ADDR, 0x8);
@@ -55,8 +57,12 @@ void setup_app1(uint64_t tmp)
 
 int main(void)
 {
+
+	
 	// Setup UART access
 	setup_uart(10);
+
+	alt_printf("Heap pointer value: %x\n", &__heap_pointer);
 
 	// Setup app1 capabilities and PC
 	setup_app1(11);
