@@ -66,10 +66,13 @@ int main(void)
 
 	s3k_init_malloc();
 	
-	int* dynamic_ints_a = s3k_simple_malloc(4*sizeof(int));
-	int* dynamic_ints_b = s3k_simple_malloc(4*sizeof(int));
+	char* dynamic_ints_a = s3k_simple_malloc(10); // 10 104+90 = 194
+	print_malloc_debug_info("--- BLOCKS AFTER A ---");
+	char* dynamic_ints_b = s3k_simple_malloc(200*sizeof(char));
+	print_malloc_debug_info("--- BLOCKS AFTER B ---");
 	s3k_simple_free(dynamic_ints_b);
 	int* dynamic_ints_c = s3k_simple_malloc(4*sizeof(int));
+	print_malloc_debug_info("--- BLOCKS AFTER C ---");
 
 	alt_printf("Position of dyn int a: 0x%x\n\n", dynamic_ints_a);
 	alt_printf("Position of dyn int b: 0x%x\n\n", dynamic_ints_b);
