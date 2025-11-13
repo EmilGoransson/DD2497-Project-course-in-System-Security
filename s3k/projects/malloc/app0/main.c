@@ -1,5 +1,7 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
+#include "canary.h"
+#include <string.h>
 
 #define APP0_PID 0
 #define APP1_PID 1
@@ -59,28 +61,13 @@ void setup_app1(uint64_t tmp)
 
 int main(void)
 {
-
-	
 	// Setup UART access
 	setup_uart(10);
 
-	alt_printf("Heap pointer address: %x\n", &__heap_pointer);
-	alt_printf("canary pointer address: %x\n", &__canary_pointer);
-	alt_printf("end pointer address: %x\n", &_end);
 
-	__canary_pointer = 200000000000;
-	alt_printf("canary pointer value: %d\n", __canary_pointer);
-
-
-	// Setup app1 capabilities and PC
-	setup_app1(11);
-
-	char buf[12];
-	alt_snprintf(buf, 64, "hello, world from app%x", 0);
-
-	// Write hello world.
-	alt_puts(buf);
-
-	// BYE!
-	alt_puts("bye from app0");
+    alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
+	
+	init_canary_table();
+	generate_canary((uint64_t*) 500, 500);
+	read_canary(0);
 }
