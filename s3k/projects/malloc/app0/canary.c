@@ -39,7 +39,7 @@ void internal_add_canary(CanaryObject canary){
 // (for now no randomizer. "canary_value" is just incremental values, not secure)
 void add_canary(uint64_t* heap_canary_location){
     CanaryObject new_canary;
-    randomizer()
+    randomizer();
     
     new_canary.canary = canary_value;
     new_canary.heap_canary_pointer = heap_canary_location;
