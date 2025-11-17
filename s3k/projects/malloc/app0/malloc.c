@@ -104,7 +104,7 @@ void* s3k_simple_malloc(uint64_t size){
         if(!next->is_used){
             // If it is free and fits the object, use it
             if(get_heap_object_size(*next) >= size){
-                s3k_try_split(next, size);
+                s3k_try_trim_extend(next, size);
                 next->is_used = true;
                 return (void*)next->start_pos; 
             }
