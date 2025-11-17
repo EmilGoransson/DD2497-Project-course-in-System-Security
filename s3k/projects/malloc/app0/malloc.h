@@ -1,9 +1,12 @@
 #pragma once
 #include "altc/altio.h"
 #include "s3k/s3k.h"
+#include "string.h"
 
 extern int __heap_pointer;
 extern int __heap_size;
+extern int __heap_metadata_pointer;
+extern int __heap_metadata_size;
 
 typedef struct HeapObject{
     bool is_used;
@@ -13,9 +16,11 @@ typedef struct HeapObject{
     struct HeapObject* next;
 } HeapObject;
 
-typedef struct MallocHeap{
-    HeapObject objects[10];
-} MallocHeap;
+typedef struct MallocMatadata{
+    uint64_t number_of_objects;
+    // Array of objects of length number_of_objects
+    HeapObject objects[0]; 
+} MallocMatadata;
 
 void print_malloc_debug_info(char* title);
 

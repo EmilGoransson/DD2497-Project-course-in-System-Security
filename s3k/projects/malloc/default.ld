@@ -10,6 +10,12 @@ SECTIONS {
 		*( .text .text.* )
 	} > RAM
 
+	.heap_metadata : {
+		__heap_metadata_pointer = .;
+		. += __heap_metadata_size;
+        _end = .;
+    } > RAM
+
 	.data : {
 		_data = . ;
 		*( .data )
@@ -29,7 +35,7 @@ SECTIONS {
 
 	.heap : ALIGN(8){
 		__heap_pointer = .;
-		. += 1024;
+		. += __heap_size;
         _end = .;
     }
 

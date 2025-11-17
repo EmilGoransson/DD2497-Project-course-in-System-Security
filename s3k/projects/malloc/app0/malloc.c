@@ -1,13 +1,14 @@
 #include "malloc.h"
 
+
 #define HEAP_OBJECT_MIN_SIZE 16
 #define HEAP_OBJECT_MAX_SIZE 512
 
 // Placed on stack for now
-static MallocHeap s3k_heap;
+static MallocMatadata* s3k_heap;
 
-int get_num_heap_slots(){
-    return sizeof(s3k_heap.objects)/sizeof(HeapObject);
+uint64_t get_num_heap_slots(){
+    return s3k_heap->number_of_objects;
 }
 
 uint64_t get_heap_object_size(HeapObject obj){
@@ -17,29 +18,39 @@ uint64_t get_heap_object_size(HeapObject obj){
 void print_malloc_debug_info(char* title){
     alt_printf("%s\n", title);
     for(int i=0; i<get_num_heap_slots(); ++i){
-        alt_printf("Object pos: 0x%x --> 0x%x, NP: 0x%x\n", s3k_heap.objects[i].start_pos, s3k_heap.objects[i].end_pos, s3k_heap.objects[i].next);
+        alt_printf("Object pos: 0x%x --> 0x%x, NP: 0x%x\n", s3k_heap->objects[i].start_pos, s3k_heap->objects[i].end_pos, s3k_heap->objects[i].next);
     }
 }
 
 void s3k_init_malloc(){
+    // Set heap to point at
+    s3k_heap = (MallocMatadata*)&__heap_metadata_pointer;
+    //memset(s3k_heap, 0, sizeof(__heap_metadata_size));
+    // Set number of metadata objects
+
+    s3k_heap->number_of_objects = ((uint64_t)(&__heap_metadata_size)-sizeof(s3k_heap->number_of_objects))/sizeof(s3k_heap->objects[0]);
+    alt_printf("Heap metadata objects: %d\n", s3k_heap->number_of_objects);
     alt_printf("Heap pointer %x\n", &__heap_pointer);
     alt_printf("Heap size %x\n", &__heap_size);
+    alt_printf("Heap size %x\n", &__heap_size);
+    alt_printf("Heap metadat pointer 0x%x\n", (void*)s3k_heap);
     uint64_t heap_size = (uint64_t)&__heap_size;
     uint64_t heap_start = (uint64_t)&__heap_pointer;
-    for(uint64_t i=0; i<get_num_heap_slots(); i++){
-        uint64_t object_size = heap_size / get_num_heap_slots();
-        s3k_heap.objects[i].start_pos = heap_start + i*object_size;
-        s3k_heap.objects[i].end_pos = heap_start + (i+1)*object_size;
-        s3k_heap.objects[i].is_used = false;
+    uint64_t object_size = heap_size / get_num_heap_slots();
+    alt_printf("Object size: %d\n", object_size);
+    for(uint64_t i=0; i<4; i++){ // TO BE CHANGED
+        s3k_heap->objects[i].start_pos = heap_start + i*object_size;
+        s3k_heap->objects[i].end_pos = heap_start + (i+1)*object_size;
+        s3k_heap->objects[i].is_used = false;
         // Set next and prev pointer of previous object
         if(i>0){
-            s3k_heap.objects[i-1].next = &s3k_heap.objects[i];
-            s3k_heap.objects[i].prev = &s3k_heap.objects[i-1];
+            s3k_heap->objects[i-1].next = &s3k_heap->objects[i];
+            s3k_heap->objects[i].prev = &s3k_heap->objects[i-1];
         }
     }
 
     // set next of last object to null_ptr
-    s3k_heap.objects[get_num_heap_slots()-1].next = (void*)0;
+    s3k_heap->objects[get_num_heap_slots()-1].next = (void*)0;
     
     // Debug print
     print_malloc_debug_info("--- Initial Mallov Heap Blocks ---");
@@ -97,7 +108,7 @@ void* s3k_simple_malloc(uint64_t size){
         (void*)0;
     }
 
-    HeapObject* next = &s3k_heap.objects[0];
+    HeapObject* next = &s3k_heap->objects[0];
 
     while(next){
         
@@ -133,8 +144,8 @@ void s3k_simple_free(void* ptr){
     for(int i=0; i<get_num_heap_slots(); i++){
         uint64_t heap_size = (uint64_t)&__heap_size;
         uint64_t object_size = heap_size / get_num_heap_slots();
-        if((void*)s3k_heap.objects[i].start_pos == ptr){
-            s3k_heap.objects[i].is_used = false;
+        if((void*)s3k_heap->objects[i].start_pos == ptr){
+            s3k_heap->objects[i].is_used = false;
             return;
         }
     }        
