@@ -16,20 +16,16 @@ void init_canary_table(){
     //Change the current canaries to -1 as a starting value
     int i = 0;
     while(i != CANARY_TABLE_ENTRIES) {
-        canarytable->value[i++].canary = -1;
+        canarytable->entries[i++].canary = -1;
     }
 }
 
-void read_canary(uint64_t index){
-    alt_printf("The canary is '%d' and it's located at 0x%x\n", canarytable->value[index].canary, canarytable->value[index].heap_canary_pointer);
-}
-
-//Used by generate_canary, finds first available spot and adds it to the allocated space in the heap
+//Used by generate_canary, finds first available spot in ther internal canary table and adds there
 //Canary = -1? Available space
 //else canary in use
-void add_canary(CanaryObject canary){
+void internal_add_canary(CanaryObject canary){
     int free_index = 0;
-    while (canarytable->value[free_index].canary != -1) {
+    while (canarytable->entries[free_index].canary != -1) {
         if (free_index == CANARY_TABLE_ENTRIES){
             //No freeindex found, cannot add new entry to canary table
             return;
@@ -37,22 +33,70 @@ void add_canary(CanaryObject canary){
         free_index++;
     }
     // alt_printf("Freeindex found by add_canary: %d\n", free_index);
-    canarytable->value[free_index] = canary;
+    canarytable->entries[free_index] = canary;
 }
 
-// (for now "canary_value" is just incremental values, not secure)
-void generate_canary(uint64_t* heap_address, uint64_t heap_size){
+// (for now no randomizer. "canary_value" is just incremental values, not secure)
+void add_canary(uint64_t* heap_canary_location){
     CanaryObject new_canary;
-    canary_value += 1;
+    randomizer()
     
     new_canary.canary = canary_value;
-    new_canary.heap_canary_pointer = (uint64_t)heap_address + heap_size - sizeof(CanaryObject); // Make some sort of s3k logic for this to write in heap || Ask about logic to put canary at end of heap
+    new_canary.heap_canary_pointer = heap_canary_location;
     
-    add_canary(new_canary);
+    internal_add_canary(new_canary);
 }
 
+int randomizer(){
+    canary_value += 1;
+}
+
+// Probably won't work for the monitor process. Will have to share the OG process canary table with the monitor process.
+// Right now it's made as if the process is checking itself
+bool check_canary(){
+    bool same_canary = true;
+
+    for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
+        if(canarytable->entries[i].canary != -1){
+            if(canarytable->entries[i].canary != *(canarytable->entries[i].heap_canary_pointer)){
+                same_canary = true;
+                alt_printf("BUFFER OVERFLOW. The canary was '%d', but now it's '%d' \n", canarytable->entries[i].canary, *(canarytable->entries[i].heap_canary_pointer));
+            }
+        }
+    }
 
 
+    return same_canary;
+}
+
+void remove_canary(__uint64_t* heap_start){
+    CanaryObject* rev_obj;
+    __uint8_t i = 0;
+    
+    //Find CanaryObject in canarytable
+    //iterate the list until heap_start indicator is found
+    while (canarytable->entries[i].heap_canary_pointer != heap_start)
+    {
+        i++;
+        if (i > CANARY_TABLE_ENTRIES)
+        {
+            alt_printf("Object not found, cant remove\nReturning...\n");
+            return;
+        }
+        
+    }
+    rev_obj = &(canarytable->entries[i]);
+    alt_printf("rev_obj canary: %d\n", rev_obj->canary);
+
+    //Clear information about the object (Done by reference)
+    rev_obj->canary = -1;
+    rev_obj->heap_canary_pointer = (__uint64_t*) 0xDEADBEEF;
+    alt_printf("The in-memory object's canary: %d\n", canarytable->entries[i].canary);
+}
+
+void read_canary(__uint64_t index){
+    alt_printf("The canary is '%d' and it's located at 0x%x\n", canarytable->entries[index].canary, canarytable->entries[index].heap_canary_pointer);
+}
 
 void size(CanaryTable* node){
     alt_printf("uint16 size in bytes %d\n", sizeof(uint16_t));

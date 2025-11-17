@@ -67,7 +67,13 @@ int main(void)
 
     alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
 	
+	*(&__canary_metadata_pointer + 984) = 3;
+	*(&__canary_metadata_pointer + 1484) = 2;
+
 	init_canary_table();
-	generate_canary((uint64_t*) 500, 500);
-	read_canary(0);
+	add_canary((uint64_t*) (&__canary_metadata_pointer + 984));
+	add_canary((uint64_t*) (&__canary_metadata_pointer + 1484));
+	check_canary();
+	remove_canary((uint64_t*) (&__canary_metadata_pointer + 1484));
+	// read_canary(0);
 }
