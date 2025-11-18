@@ -9,6 +9,11 @@ static int canarytable_free = 0;
 
 int canary_value = 0;
 
+
+/*
+Initiate canarytable with the "unused" value (-1)
+
+*/
 void init_canary_table(){
     //Point to the memory area
     canarytable = (CanaryTable*) &__canary_metadata_pointer;
@@ -20,14 +25,19 @@ void init_canary_table(){
     }
 }
 
-//Used by generate_canary, finds first available spot in ther internal canary table and adds there
-//Canary = -1? Available space
-//else canary in use
+/*
+Finds first available spot in ther internal canary table and adds there
+Canary = -1? Available space
+else canary in use
+
+Used by add_canary
+*/
 void internal_add_canary(CanaryObject canary){
     int free_index = 0;
     while (canarytable->entries[free_index].canary != -1) {
         if (free_index == CANARY_TABLE_ENTRIES){
             //No freeindex found, cannot add new entry to canary table
+            alt_printf("Error: could not add new canary to canarytable");
             return;
         }
         free_index++;
@@ -36,7 +46,12 @@ void internal_add_canary(CanaryObject canary){
     canarytable->entries[free_index] = canary;
 }
 
-// (for now no randomizer. "canary_value" is just incremental values, not secure)
+/* 
+Creates a new entry into the "canarytable".
+Associates a canary with heap_canary_location (a memory address)).
+
+(for now no randomizer. "canary_value" is just incremental values, not secure)
+*/
 void add_canary(uint64_t* heap_canary_location){
     CanaryObject new_canary;
     randomizer();
@@ -47,6 +62,11 @@ void add_canary(uint64_t* heap_canary_location){
     internal_add_canary(new_canary);
 }
 
+/*
+Randomizer for creating canary values
+
+TODO: need a dedicated PRNG or similar maybe?
+*/
 int randomizer(){
     canary_value += 1;
 }
