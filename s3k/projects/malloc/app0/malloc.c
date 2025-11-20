@@ -1,0 +1,152 @@
+#include "malloc.h"
+
+
+#define HEAP_OBJECT_MIN_SIZE 16
+#define HEAP_OBJECT_MAX_SIZE 512
+
+// Placed on stack for now
+static MallocMatadata* s3k_heap;
+
+uint64_t get_num_heap_slots(){
+    return s3k_heap->number_of_objects;
+}
+
+uint64_t get_heap_object_size(HeapObject obj){
+    return (uint64_t)(obj.end_pos - obj.start_pos); 
+}
+
+void print_malloc_debug_info(char* title){
+    alt_printf("%s\n", title);
+    for(int i=0; i<get_num_heap_slots(); ++i){
+        alt_printf("Object pos: 0x%x --> 0x%x, NP: 0x%x\n", s3k_heap->objects[i].start_pos, s3k_heap->objects[i].end_pos, s3k_heap->objects[i].next);
+    }
+}
+
+void s3k_init_malloc(){
+    // Set heap to point at
+    s3k_heap = (MallocMatadata*)&__heap_metadata_pointer;
+    //memset(s3k_heap, 0, sizeof(__heap_metadata_size));
+    // Set number of metadata objects
+
+    s3k_heap->number_of_objects = ((uint64_t)(&__heap_metadata_size)-sizeof(s3k_heap->number_of_objects))/sizeof(s3k_heap->objects[0]);
+    alt_printf("Heap metadata objects: %d\n", s3k_heap->number_of_objects);
+    alt_printf("Heap pointer %x\n", &__heap_pointer);
+    alt_printf("Heap size %x\n", &__heap_size);
+    alt_printf("Heap size %x\n", &__heap_size);
+    alt_printf("Heap metadat pointer 0x%x\n", (void*)s3k_heap);
+    uint64_t heap_size = (uint64_t)&__heap_size;
+    uint64_t heap_start = (uint64_t)&__heap_pointer;
+    uint64_t object_size = heap_size / get_num_heap_slots();
+    alt_printf("Object size: %d\n", object_size);
+    for(uint64_t i=0; i<4; i++){ // TO BE CHANGED
+        s3k_heap->objects[i].start_pos = heap_start + i*object_size;
+        s3k_heap->objects[i].end_pos = heap_start + (i+1)*object_size;
+        s3k_heap->objects[i].is_used = false;
+        // Set next and prev pointer of previous object
+        if(i>0){
+            s3k_heap->objects[i-1].next = &s3k_heap->objects[i];
+            s3k_heap->objects[i].prev = &s3k_heap->objects[i-1];
+        }
+    }
+
+    // set next of last object to null_ptr
+    s3k_heap->objects[get_num_heap_slots()-1].next = (void*)0;
+    
+    // Debug print
+    print_malloc_debug_info("--- Initial Mallov Heap Blocks ---");
+}
+
+/*
+Function to combine two adjecent blocks if, they 
+are both unused and are together at least target_size in size.
+
+Returns the address of the new block, or null_ptr if no blocks were combined
+*/
+HeapObject* s3k_try_combine(HeapObject* start_object, uint64_t target_size){
+    // If next block exists and is not used, try to combine it with the current one
+    if(start_object->next && !start_object->next->is_used){
+        HeapObject* next_object = start_object->next;
+        uint64_t first_block_size = get_heap_object_size(*start_object);
+        uint64_t second_block_size = get_heap_object_size(*start_object->next);
+        
+        // Later on we might want this to be recursive, e.g. 4 adjecent blocks are combined
+        if(first_block_size + second_block_size < target_size){
+            return (HeapObject*)0;
+        }
+
+        //Combine the two blocks
+        start_object->end_pos = start_object->next->end_pos;
+        start_object->next = next_object->next;
+
+        //Kill the next object
+        next_object->is_used = false;
+        next_object->start_pos = 0;
+        next_object->end_pos = 0;
+
+        return start_object;
+    }
+    return (HeapObject*)0;
+}
+
+/*
+    If the next block is available, try to extend it by decreasing the 
+    size of the current object. I.e. [---A---|---B---] ==> [-A-|-----B-----]
+*/
+void s3k_try_trim_extend(HeapObject* object, uint64_t target_size){
+    uint64_t object_size = get_heap_object_size(*object);
+    if (object_size <= target_size)
+        return;
+    if (object_size / 2 > target_size){
+        HeapObject* next_object = object->next;
+        object->end_pos = object->start_pos + target_size;
+        next_object->start_pos = object->end_pos;
+    }    
+}
+
+void* s3k_simple_malloc(uint64_t size){
+    if (size > (uint64_t)&__heap_size / get_num_heap_slots()){
+        (void*)0;
+    }
+
+    HeapObject* next = &s3k_heap->objects[0];
+
+    while(next){
+        
+        if(!next->is_used){
+            // If it is free and fits the object, use it
+            if(get_heap_object_size(*next) >= size){
+                s3k_try_trim_extend(next, size);
+                next->is_used = true;
+                return (void*)next->start_pos; 
+            }
+            // Otherwise, try to combine with next block
+            else{
+                HeapObject* combined = s3k_try_combine(next, size);
+                if(combined) return (void*)combined->start_pos;
+            }
+        }
+
+        next = next->next;
+    }
+    /*
+    for(int i = 0; i < get_num_heap_slots(); i++){
+        if (!s3k_heap.objects[i].is_used){
+            s3k_heap.objects[i].is_used = true;
+            return (void*)s3k_heap.objects[i].start_pos;
+        }
+    }
+    */
+    return (void*)0;
+}
+
+/* Slow and basic implementation of free */
+void s3k_simple_free(void* ptr){
+    for(int i=0; i<get_num_heap_slots(); i++){
+        uint64_t heap_size = (uint64_t)&__heap_size;
+        uint64_t object_size = heap_size / get_num_heap_slots();
+        if((void*)s3k_heap->objects[i].start_pos == ptr){
+            s3k_heap->objects[i].is_used = false;
+            return;
+        }
+    }        
+}

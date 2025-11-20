@@ -1,5 +1,9 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
+#include "canary.h"
+#include <string.h>
+
+#include "malloc.h"
 
 #define APP0_PID 0
 #define APP1_PID 1
@@ -17,6 +21,8 @@
 #define CHANNEL 9
 
 extern int __heap_pointer;
+extern int __canary_pointer;
+extern int _end;
 
 void setup_uart(uint64_t uart_idx)
 {
@@ -57,22 +63,33 @@ void setup_app1(uint64_t tmp)
 
 int main(void)
 {
-
-	
 	// Setup UART access
 	setup_uart(10);
 
-	alt_printf("Heap pointer value: %x\n", &__heap_pointer);
+	s3k_init_malloc();
+	
+	char* dynamic_ints_a = s3k_simple_malloc(10); // 10 104+90 = 194
+	print_malloc_debug_info("--- BLOCKS AFTER A ---");
+	char* dynamic_ints_b = s3k_simple_malloc(200*sizeof(char));
+	print_malloc_debug_info("--- BLOCKS AFTER B ---");
+	s3k_simple_free(dynamic_ints_b);
+	int* dynamic_ints_c = s3k_simple_malloc(4*sizeof(int));
+	print_malloc_debug_info("--- BLOCKS AFTER C ---");
 
-	// Setup app1 capabilities and PC
-	setup_app1(11);
+	alt_printf("Position of dyn int a: 0x%x\n\n", dynamic_ints_a);
+	alt_printf("Position of dyn int b: 0x%x\n\n", dynamic_ints_b);
+	alt_printf("Position of dyn int c: 0x%x\n\n", dynamic_ints_c);
 
-	char buf[12];
-	alt_snprintf(buf, 64, "hello, world from app%x", 0);
 
-	// Write hello world.
-	alt_puts(buf);
+    alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
+	
+	*(&__canary_metadata_pointer + 984) = 3;
+	*(&__canary_metadata_pointer + 1484) = 2;
 
-	// BYE!
-	alt_puts("bye from app0");
+	init_canary_table();
+	add_canary((uint64_t*) (&__canary_metadata_pointer + 984));
+	add_canary((uint64_t*) (&__canary_metadata_pointer + 1484));
+	check_canary();
+	remove_canary((uint64_t*) (&__canary_metadata_pointer + 1484));
+	// read_canary(0);
 }
