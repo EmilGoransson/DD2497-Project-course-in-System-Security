@@ -3,6 +3,9 @@
 
 extern int __canary_metadata_pointer;
 
+// For initiliziing canary table in a specific section
+// __attribute__((section(".canary_metadata"), used))
+// CanaryObject ctable[CANARY_TABLE_ENTRIES];
 static CanaryTable* canarytable;
 static int canarytable_head = -1;
 static int canarytable_free = 0;
@@ -12,7 +15,7 @@ int canary_value = 0;
 void init_canary_table(){
     //Point to the memory area
     canarytable = (CanaryTable*) &__canary_metadata_pointer;
-
+    
     //Change the current canaries to -1 as a starting value
     int i = 0;
     while(i != CANARY_TABLE_ENTRIES) {
