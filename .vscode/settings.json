@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "altio.h": "c",
+        "utils.h": "c",
+        "malloc.h": "c"
+    }
+}
