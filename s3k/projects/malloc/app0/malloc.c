@@ -150,7 +150,3 @@ void s3k_simple_free(void* ptr){
         }
     }        
 }
-
-void test(){
-    alt_printf("RUNNING TEST FUNCTION\n");
-}

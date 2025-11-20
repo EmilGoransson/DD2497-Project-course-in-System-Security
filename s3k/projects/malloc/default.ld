@@ -15,6 +15,15 @@ SECTIONS {
 		. += __heap_metadata_size;
         _end = .;
     } > RAM
+	/*
+		8 byte for pointer
+		2 bytes for unique value of canary (4Kib heap (1 byte heap object) = 2^12 potential heap objects. 2 byte lets us define that)
+		(Make canary metadata 4KiB for now)
+	*/
+	.canary_metadata : ALIGN(4096) {
+		__canary_metadata_pointer = .;
+		. += __canaryTable_size;
+	}
 
 	.data : {
 		_data = . ;
@@ -33,9 +42,10 @@ SECTIONS {
 		_end = .;
 	} > RAM
 
-	.heap : ALIGN(8){
+	.heap : ALIGN(4096){
 		__heap_pointer = .;
 		. += __heap_size;
+		__canary_pointer = .;
         _end = .;
     }
 

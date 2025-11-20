@@ -5,3 +5,5 @@ MEMORY {
 __stack_size = 1024;
 __heap_size = 1024;
 __heap_metadata_size = 512;
+__canaryTable_size = 4096;
+
