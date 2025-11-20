@@ -10,8 +10,6 @@ static CanaryTable* canarytable;
 static int canarytable_head = -1;
 static int canarytable_free = 0;
 
-int canary_value = 0;
-
 
 /*
 Initiate canarytable with the "unused" value (-1)
@@ -47,6 +45,7 @@ void internal_add_canary(CanaryObject canary){
     }
     // alt_printf("Freeindex found by add_canary: %d\n", free_index);
     canarytable->entries[free_index] = canary;
+    *canary.heap_canary_pointer = canary.canary;
 }
 
 /* 
@@ -57,11 +56,8 @@ Associates a canary with heap_canary_location (a memory address)).
 */
 void add_canary(uint64_t* heap_canary_location){
     CanaryObject new_canary;
-    randomizer();
-    
-    new_canary.canary = canary_value;
+    new_canary.canary = next_random_int();
     new_canary.heap_canary_pointer = heap_canary_location;
-    
     internal_add_canary(new_canary);
 }
 
@@ -70,8 +66,10 @@ Randomizer for creating canary values
 
 TODO: need a dedicated PRNG or similar maybe?
 */
-int randomizer(){
+uint64_t next_random_int(){
+    static uint64_t canary_value = 0;
     canary_value += 1;
+    return canary_value;
 }
 
 // Probably won't work for the monitor process. Will have to share the OG process canary table with the monitor process.
@@ -83,6 +81,7 @@ bool check_canary(){
         if(canarytable->entries[i].canary != -1){
             if(canarytable->entries[i].canary != *(canarytable->entries[i].heap_canary_pointer)){
                 same_canary = true;
+                alt_printf("ERROR CANARY AT: 0x%x\n", canarytable->entries[i].heap_canary_pointer);
                 alt_printf("BUFFER OVERFLOW. The canary was '%d', but now it's '%d' \n", canarytable->entries[i].canary, *(canarytable->entries[i].heap_canary_pointer));
             }
         }
@@ -113,7 +112,7 @@ void remove_canary(__uint64_t* heap_start){
 
     //Clear information about the object (Done by reference)
     rev_obj->canary = -1;
-    rev_obj->heap_canary_pointer = (__uint64_t*) 0xDEADBEEF;
+    rev_obj->heap_canary_pointer = (__uint64_t*) 0xDEADBEEF; // <-- BORDE BARA NULLPTR?
     alt_printf("The in-memory object's canary: %d\n", canarytable->entries[i].canary);
 }
 

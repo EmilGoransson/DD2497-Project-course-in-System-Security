@@ -4,6 +4,8 @@
 #define HEAP_OBJECT_MIN_SIZE 16
 #define HEAP_OBJECT_MAX_SIZE 512
 
+#define CANARY_SIZE sizeof(((CanaryObject*)0)->canary) 
+
 // Placed on stack for now
 static MallocMatadata* s3k_heap;
 
@@ -38,7 +40,7 @@ void s3k_init_malloc(){
     uint64_t heap_start = (uint64_t)&__heap_pointer;
     uint64_t object_size = heap_size / get_num_heap_slots();
     alt_printf("Object size: %d\n", object_size);
-    for(uint64_t i=0; i<4; i++){ // TO BE CHANGED
+    for(uint64_t i=0; i<s3k_heap->number_of_objects; i++){ // TO BE CHANGED
         s3k_heap->objects[i].start_pos = heap_start + i*object_size;
         s3k_heap->objects[i].end_pos = heap_start + (i+1)*object_size;
         s3k_heap->objects[i].is_used = false;
@@ -94,38 +96,43 @@ HeapObject* s3k_try_combine(HeapObject* start_object, uint64_t target_size){
 */
 void s3k_try_trim_extend(HeapObject* object, uint64_t target_size){
     uint64_t object_size = get_heap_object_size(*object);
-    if (object_size <= target_size)
+    alt_printf("Object size: %d\n", object_size);
+    alt_printf("Object pos: 0x%x\n", object);
+    HeapObject* next_object = object->next;
+    if (object_size <= target_size || !(next_object))
         return;
     if (object_size / 2 > target_size){
-        HeapObject* next_object = object->next;
         object->end_pos = object->start_pos + target_size;
         next_object->start_pos = object->end_pos;
     }    
 }
 
 void* s3k_simple_malloc(uint64_t size){
+    size += CANARY_SIZE;
     if (size > (uint64_t)&__heap_size / get_num_heap_slots()){
         (void*)0;
     }
 
     HeapObject* next = &s3k_heap->objects[0];
-
+    HeapObject* block_to_give = (HeapObject*)0;
     while(next){
         
         if(!next->is_used){
             // If it is free and fits the object, use it
             if(get_heap_object_size(*next) >= size){
+
                 s3k_try_trim_extend(next, size);
-                next->is_used = true;
-                return (void*)next->start_pos; 
+                //next->is_used = true;
+                block_to_give = next;
+                break;
+                //return (void*)next->start_pos; 
             }
             // Otherwise, try to combine with next block
             else{
-                HeapObject* combined = s3k_try_combine(next, size);
-                if(combined) return (void*)combined->start_pos;
+                block_to_give = s3k_try_combine(next, size);
+                if(block_to_give) break; //return (void*)combined->start_pos;
             }
         }
-
         next = next->next;
     }
     /*
@@ -136,6 +143,11 @@ void* s3k_simple_malloc(uint64_t size){
         }
     }
     */
+    if(block_to_give != 0){
+        block_to_give->is_used = true;
+        add_canary((uint64_t*) (block_to_give->end_pos-CANARY_SIZE));
+        return (void*)block_to_give->start_pos;
+    }
     return (void*)0;
 }
 
@@ -146,6 +158,7 @@ void s3k_simple_free(void* ptr){
         uint64_t object_size = heap_size / get_num_heap_slots();
         if((void*)s3k_heap->objects[i].start_pos == ptr){
             s3k_heap->objects[i].is_used = false;
+            remove_canary((uint64_t*)(s3k_heap->objects[i].end_pos-CANARY_SIZE));
             return;
         }
     }        

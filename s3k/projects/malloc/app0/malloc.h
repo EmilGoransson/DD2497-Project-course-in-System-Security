@@ -2,6 +2,7 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 #include "string.h"
+#include "canary.h"
 
 extern int __heap_pointer;
 extern int __heap_size;
