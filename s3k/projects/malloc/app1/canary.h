@@ -42,3 +42,7 @@ void init_canary_table();
 void read_canary(__uint64_t read_canary);
 void size(CanaryTable* node);
 void test();
+
+// Temporary solution, we need a linker to solve this.
+// Exported variable
+//uint64_t internal_canary_end_addr;

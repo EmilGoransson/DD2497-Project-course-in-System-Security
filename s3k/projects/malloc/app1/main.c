@@ -1,8 +1,37 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 
+#include "malloc.h"
+#include "canary.h"
+#include "canary_trap.h"
+
 int main(void)
 {
-	// alt_puts("hello, world from app1");
-	// alt_puts("bye from app1");
+	alt_puts("hello, world from app1");
+	init_canary_table();
+	s3k_init_malloc();
+	init_canary_trap();
+	*((int*)0x80020000) = 1; // ILLIGAL WRITE, will it invoke the trap handler?
+	
+	char* dynamic_ints_a = s3k_simple_malloc(10); // 10 104+90 = 194
+	//print_malloc_debug_info("--- BLOCKS AFTER A ---");
+	char* dynamic_ints_b = s3k_simple_malloc(200);
+	//print_malloc_debug_info("--- BLOCKS AFTER B ---");
+	//s3k_simple_free(dynamic_ints_b);
+	char* dynamic_ints_c = s3k_simple_malloc(4);
+	alt_printf("-------- AFTER C --------\n");
+	char* dynamic_ints_d = s3k_simple_malloc(4);
+	char* dynamic_ints_e = s3k_simple_malloc(200);
+	//print_malloc_debug_info("--- BLOCKS AFTER C ---");
+
+	alt_printf("Position of dyn int a: 0x%x\n\n", dynamic_ints_a);
+	alt_printf("Position of dyn int b: 0x%x\n\n", dynamic_ints_b);
+	alt_printf("Position of dyn int c: 0x%x\n\n", dynamic_ints_c);
+	alt_printf("Position of dyn int d: 0x%x\n\n", dynamic_ints_d);
+	alt_printf("Position of dyn int e: 0x%x\n\n", dynamic_ints_e);
+	memset(dynamic_ints_a, 0, 16); // Artificiall buffer overflow
+
+    alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
+	
+	check_canary();
 }

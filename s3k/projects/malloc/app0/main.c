@@ -1,9 +1,7 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
-#include "canary.h"
 #include <string.h>
-
-#include "malloc.h"
+#include "../../tutorial-commons/utils.h"
 
 #define APP0_PID 0
 #define APP1_PID 1
@@ -24,7 +22,8 @@ extern int __heap_pointer;
 extern int __canary_pointer;
 extern int _end;
 
-void setup_uart(uint64_t uart_idx)
+
+void setup_uart_2(uint64_t uart_idx)
 {
 	uint64_t uart_addr = s3k_napot_encode(UART0_BASE_ADDR, 0x8);
 	// Derive a PMP capability for accessing UART
@@ -36,23 +35,33 @@ void setup_uart(uint64_t uart_idx)
 	s3k_sync_mem();
 }
 
+
 void setup_app1(uint64_t tmp)
 {
+	/*
+		We reserve PMP slot 0 for the canary metadata section.
+		A better way would be to allocate PMP slots high-->low
+		so that subsections can have higher priority (lower slot).
+	*/
+
 	uint64_t uart_addr = s3k_napot_encode(UART0_BASE_ADDR, 0x8);
 	uint64_t app1_addr = s3k_napot_encode(0x80020000, 0x10000);
 
 	// Derive a PMP capability for app1 main memory
 	s3k_cap_derive(RAM_MEM, tmp, s3k_mk_pmp(app1_addr, S3K_MEM_RWX));
 	s3k_mon_cap_move(MONITOR, APP0_PID, tmp, APP1_PID, 0);
-	s3k_mon_pmp_load(MONITOR, APP1_PID, 0, 0);
+	s3k_mon_pmp_load(MONITOR, APP1_PID, 0, 1);
 
 	// Derive a PMP capability for uart
 	s3k_cap_derive(UART_MEM, tmp, s3k_mk_pmp(uart_addr, S3K_MEM_RW));
 	s3k_mon_cap_move(MONITOR, APP0_PID, tmp, APP1_PID, 1);
-	s3k_mon_pmp_load(MONITOR, APP1_PID, 1, 1);
+	s3k_mon_pmp_load(MONITOR, APP1_PID, 1, 2);
 
 	// derive a time slice capability
 	s3k_mon_cap_move(MONITOR, APP0_PID, HART1_TIME, APP1_PID, 2);
+
+	// For now, just give it all RAM
+	s3k_mon_cap_move(MONITOR, APP0_PID, RAM_MEM, APP1_PID, 3);
 
 	// Write start PC of app1 to PC
 	s3k_mon_reg_write(MONITOR, APP1_PID, S3K_REG_PC, 0x80020000);
@@ -64,31 +73,7 @@ void setup_app1(uint64_t tmp)
 int main(void)
 {
 	// Setup UART access
-	setup_uart(10);
+	setup_uart_2(10);
+	setup_app1(11);
 
-	init_canary_table();
-	s3k_init_malloc();
-	
-	char* dynamic_ints_a = s3k_simple_malloc(10); // 10 104+90 = 194
-	//print_malloc_debug_info("--- BLOCKS AFTER A ---");
-	char* dynamic_ints_b = s3k_simple_malloc(200);
-	//print_malloc_debug_info("--- BLOCKS AFTER B ---");
-	//s3k_simple_free(dynamic_ints_b);
-	char* dynamic_ints_c = s3k_simple_malloc(4);
-	alt_printf("-------- AFTER C --------\n");
-	char* dynamic_ints_d = s3k_simple_malloc(4);
-	char* dynamic_ints_e = s3k_simple_malloc(200);
-	//print_malloc_debug_info("--- BLOCKS AFTER C ---");
-
-	alt_printf("Position of dyn int a: 0x%x\n\n", dynamic_ints_a);
-	alt_printf("Position of dyn int b: 0x%x\n\n", dynamic_ints_b);
-	alt_printf("Position of dyn int c: 0x%x\n\n", dynamic_ints_c);
-	alt_printf("Position of dyn int d: 0x%x\n\n", dynamic_ints_d);
-	alt_printf("Position of dyn int e: 0x%x\n\n", dynamic_ints_e);
-	memset(dynamic_ints_a, 0, 16); // Artificiall buffer overflow
-
-    alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
-	
-	check_canary();
-	// read_canary(0);
 }

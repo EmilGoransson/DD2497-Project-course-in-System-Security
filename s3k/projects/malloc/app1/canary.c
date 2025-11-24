@@ -45,6 +45,7 @@ void internal_add_canary(CanaryObject canary){
     }
     // alt_printf("Freeindex found by add_canary: %d\n", free_index);
     canarytable->entries[free_index] = canary;
+    alt_printf("WRITING NEW CANARY METADATA AT: 0x%x\n", &canarytable->entries[free_index]);
     *canary.heap_canary_pointer = canary.canary;
 }
 
