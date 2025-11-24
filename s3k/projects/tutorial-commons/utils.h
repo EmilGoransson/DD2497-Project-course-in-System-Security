@@ -1,3 +1,4 @@
+#pragma once
 #define APP0_PID 0
 #define APP1_PID 1
 
@@ -37,6 +38,7 @@
 #define APP_1_SIZE 0x10000
 #define SHARED_BUFFER_BASE (APP_1_BASE_ADDR+APP_1_SIZE)
 #define SHARED_BUFFER_SIZE 0x10000
+
 
 void setup_uart()
 {
@@ -128,8 +130,11 @@ void s3k_print_cap(s3k_cap_t *cap) {
 				   );
 		break;
 	case S3K_CAPTY_PMP:
-		alt_printf("PMP rwx:%X used:%X index:%X address:%Z\n",
-				   (*cap).pmp.rwx, (*cap).pmp.used, (*cap).pmp.slot, (*cap).pmp.addr);
+		uint64_t pmp_start_pos;
+		uint64_t pmp_size;
+		s3k_napot_decode((*cap).pmp.addr, &pmp_start_pos, &pmp_size);
+		alt_printf("PMP rwx:%X used:%X index:%X address: 0x%X size: 0x%X\n",
+				   (*cap).pmp.rwx, (*cap).pmp.used, (*cap).pmp.slot, pmp_start_pos, pmp_size);
 		break;
 	case S3K_CAPTY_MONITOR:
 		alt_printf("Monitor  bgn:%X mrk:%X end:%X\n",
