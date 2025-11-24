@@ -32,7 +32,7 @@ void internal_add_canary(CanaryObject canary);
 
 // Generate a new canary and place it in the heap
 void add_canary(__uint64_t* heap_address);
-int randomizer();
+uint64_t next_random_int();
 
 //Initialize the canary table
 void init_canary_table();
