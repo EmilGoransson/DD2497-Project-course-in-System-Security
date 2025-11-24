@@ -9,5 +9,7 @@
 
 void init_canary_trap();
 void canary_trap_handler();
-void lock_metadata();
-void open_metadata();
+s3k_err_t lock_metadata();
+s3k_err_t open_metadata();
+
+

@@ -36,17 +36,25 @@ void init_canary_trap(){
     Wait, how do should be revert the PMP capablity? The handler will only run one time!
 */
 void canary_trap_handler(){
-    register uint64_t *caller_address asm ("ra");
-    alt_printf("Crashed at: 0x%x\n", caller_address);
-    /*
+    
+    uint64_t exception_address = s3k_reg_read(S3K_REG_EPC);
+
+    // For now, assume that this function is 200 bytes large. Will need a better way
+    // of getting its size later. Probably have to do something with linker scripts.
+    uint64_t internal_canary_end_addr = 200 + (uint64_t)internal_add_canary;
     // Test if caller is allowed to write to the canaries metadata
-    bool is_allowed_to_write = caller_address >= internal_add_canary && 
-                                caller_address <= internal_canary_end_addr;
+    bool is_allowed_to_write = exception_address >= (uint64_t)internal_add_canary && 
+                                exception_address <= internal_canary_end_addr;
 
     if(is_allowed_to_write){
         // Set capability to be writable
+        alt_printf("OPENING PMP LOCK FOR CANARY METADATA \n");
+        open_metadata();
     }
-    */
+    else{
+        alt_printf("NOT ALLOWED TO WRITE TO CANARY METADATA FROM 0x%x\n", exception_address);
+    }
+    
     //default_trap_handler(); // Defined?
 }
 
@@ -58,7 +66,7 @@ s3k_err_t lock_metadata(){
 }
 
 // Sets the metadata to read-write
-void open_metadata(){
+s3k_err_t open_metadata(){
     s3k_err_t err = s3k_pmp_unload(pmp_cap_idx);
     s3k_sync_mem();
     return err;

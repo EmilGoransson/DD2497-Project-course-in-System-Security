@@ -11,8 +11,7 @@ int main(void)
 	init_canary_table();
 	s3k_init_malloc();
 	init_canary_trap();
-	*((int*)0x80020000) = 1; // ILLIGAL WRITE, will it invoke the trap handler?
-	
+
 	char* dynamic_ints_a = s3k_simple_malloc(10); // 10 104+90 = 194
 	//print_malloc_debug_info("--- BLOCKS AFTER A ---");
 	char* dynamic_ints_b = s3k_simple_malloc(200);
