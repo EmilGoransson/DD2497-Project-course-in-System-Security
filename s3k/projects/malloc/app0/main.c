@@ -1,49 +1,10 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 #include <string.h>
-#include "../../tutorial-commons/utils.h"
+#include "../utils.h"
 
 #include "../app1/malloc.h"
 #include "../app1/canary.h"
-
-#define APP0_PID 0
-#define APP0_BASE_ADDR 0x80010000
-#define APP0_LENGHT 0x10000
-
-#define APP1_PID 1
-#define APP1_BASE_ADDR 0x80020000
-#define APP1_LENGHT 0x10000
-
-#define APP2_PID 2
-#define APP2_BASE_ADDR 0x80030000
-#define APP2_LENGHT 0x10000
-
-
-// See plat_conf.h
-#define BOOT_PMP 0
-#define RAM_MEM 1
-#define UART_MEM 2
-#define TIME_MEM 3
-#define HART0_TIME 4
-#define HART1_TIME 5
-#define HART2_TIME 6
-#define HART3_TIME 7
-#define MONITOR 8
-#define CHANNEL 9
-
-extern int _end;
-
-void setup_uart1(uint64_t uart_idx)
-{
-	uint64_t uart_addr = s3k_napot_encode(UART0_BASE_ADDR, 0x8);
-	// Derive a PMP capability for accessing UART
-	s3k_cap_derive(UART_MEM, uart_idx, s3k_mk_pmp(uart_addr, S3K_MEM_RW));
-	// Load the derive PMP capability to PMP configuration
-	s3k_pmp_load(uart_idx, 1);
-	// Synchronize PMP unit (hardware) with PMP configuration
-	// false => not full synchronization.
-	s3k_sync_mem();
-}
 
 void setup_apps()
 {
@@ -51,12 +12,6 @@ void setup_apps()
 	// Address regions for each app
 	uint64_t app1_addr = s3k_napot_encode(APP1_BASE_ADDR, APP1_LENGHT);
 	uint64_t app2_addr = s3k_napot_encode(APP2_BASE_ADDR, APP2_LENGHT);
-	// Address regions that the monitor process wants to utilize to check canary table 
-	uint64_t app1_canary_start_address = (uint64_t)&__canary_metadata_pointer + APP0_LENGHT;
-	uint64_t app1_heap_end_address = 0x1000;
-	alt_printf("app1_canary_start_address: 0x%X\n", app1_canary_start_address);
-	alt_printf("app1_heap_end_address (size): %d\n ", app1_heap_end_address);
-	uint64_t mon_checking_address = s3k_napot_encode(app1_canary_start_address, app1_heap_end_address);
 
 	// MEMORY and PMP
 	// Derive memory for APP1 to create the monitor process
@@ -73,23 +28,17 @@ void setup_apps()
 	s3k_err_t a5 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP2_PID, 0);
 	s3k_err_t a6 = s3k_mon_pmp_load(MONITOR, APP2_PID, 0, 0);
 
+
 	// Derive a PMP capability for app1's heap and canary table for app2 (APP2)
-	s3k_err_t mon_checking_err1 = s3k_cap_derive(RAM_MEM, free_cap_idx, s3k_mk_pmp(mon_checking_address, S3K_MEM_RX));
-	s3k_err_t mon_checking_err2 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP2_PID, 1);
-	s3k_err_t mon_checking_err3 = s3k_mon_pmp_load(MONITOR, APP2_PID, 1, 1);
+	// [right now, a PMP capability over the entire memory region of app1 is given to app2]
+	s3k_err_t mon_checking_err1 = s3k_cap_derive(RAM_MEM, free_cap_idx, s3k_mk_pmp(app1_addr, S3K_MEM_RX));
+	s3k_err_t mon_checking_err2 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP2_PID, 2);
+	s3k_err_t mon_checking_err3 = s3k_mon_pmp_load(MONITOR, APP2_PID, 2, 2);
 
-	if(mon_checking_err1 != S3K_SUCCESS || mon_checking_err2 != S3K_SUCCESS || mon_checking_err3 != S3K_SUCCESS)
-	{
-		alt_printf("mon_checking\n");
-		alt_printf("	derive: %d\n", mon_checking_err1);
-		alt_printf("	mon:move: %d\n", mon_checking_err2);
-		alt_printf("	mon:load: %d\n", mon_checking_err3);
-	}
-
-
-	// Send ALL of RAM to APP1
+	// Send ALL of RAM to APP1 (APP1)
 	s3k_err_t mem2 = s3k_mon_cap_move(MONITOR, APP0_PID, RAM_MEM, APP1_PID, 2);
 	
+
 	// Derive a PMP capability for uart (APP1)
 	s3k_err_t b1 = s3k_cap_derive(UART_MEM, free_cap_idx, s3k_mk_pmp(uart_addr, S3K_MEM_RW));
 	s3k_err_t b2 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 1);
@@ -97,8 +46,8 @@ void setup_apps()
 	
 	// Derive a PMP capability for uart (APP2)
 	s3k_err_t b4 = s3k_cap_derive(UART_MEM, free_cap_idx, s3k_mk_pmp(uart_addr, S3K_MEM_RW));
-	s3k_err_t b5 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP2_PID, 2);
-	s3k_err_t b6 = s3k_mon_pmp_load(MONITOR, APP2_PID, 2, 2);
+	s3k_err_t b5 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP2_PID, 1);
+	s3k_err_t b6 = s3k_mon_pmp_load(MONITOR, APP2_PID, 1, 1);
 
 	if (a1 != S3K_SUCCESS || a2 != S3K_SUCCESS || a3 != S3K_SUCCESS ||
 		a4 != S3K_SUCCESS || a5 != S3K_SUCCESS || a6 != S3K_SUCCESS ||
@@ -111,7 +60,7 @@ void setup_apps()
 		alt_printf("b4: %d, b5: %d, b6: %d\n", b4, b5, b6);
 	}
 
-	
+
 	// TIME
 	// derive a time slice capability from APP1's time (HART1) 
 	// On one core (HART1) will app1 and app2 where APP1 75% of time and APP2 25% of time
@@ -160,7 +109,7 @@ void setup_apps()
 int main(void)
 {
 	// Setup UART access
-	setup_uart1(10);
+	setup_uart_app0();
 	alt_printf("hello from app0\n");
 
 	// s3k_init_malloc();

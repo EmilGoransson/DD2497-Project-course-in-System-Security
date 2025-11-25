@@ -78,14 +78,17 @@ int randomizer(){
 
 // Probably won't work for the monitor process. Will have to share the OG process canary table with the monitor process.
 // Right now it's made as if the process is checking itself
-bool check_canary(){
+bool check_canary(CanaryTable* target_table){
     bool same_canary = true;
 
     for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
-        if(canarytable->entries[i].canary != -1){
-            if(canarytable->entries[i].canary != *(canarytable->entries[i].heap_canary_pointer)){
-                same_canary = true;
-                alt_printf("BUFFER OVERFLOW. The canary was '%d', but now it's '%d' \n", canarytable->entries[i].canary, *(canarytable->entries[i].heap_canary_pointer));
+        if(target_table->entries[i].canary != -1){
+            int current_val = *(target_table->entries[i].heap_canary_pointer);
+            int expected_val = target_table->entries[i].canary;
+
+            if(expected_val != current_val){
+                same_canary = false;
+                alt_printf("BUFFER OVERFLOW. The canary was '%d', but now it's '%d' \n", target_table->entries[i].canary, *(target_table->entries[i].heap_canary_pointer));
             }
         }
     }

@@ -22,7 +22,7 @@ typedef struct {
 
 
 //Compare Canary table entry with given_canary
-bool check_canary();
+bool check_canary(CanaryTable* target_table);
 
 //remove CanaryObject with heap_start from canary table
 void remove_canary(__uint64_t* heap_start);

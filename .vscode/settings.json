@@ -2,6 +2,9 @@
     "files.associations": {
         "altio.h": "c",
         "utils.h": "c",
-        "malloc.h": "c"
+        "malloc.h": "c",
+        "cstdint": "c",
+        "s3k.h": "c",
+        "canary.h": "c"
     }
 }

@@ -1,16 +1,10 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 #include <string.h>
-#include "../../tutorial-commons/utils.h"
+#include "../utils.h"
 
 #include "canary.h"
 #include "malloc.h"
-
-#define RAM_MEMM 0
-#define UART_MEMM 1
-
-#define APP2_PID 2
-
 
 int main(void)
 {
@@ -30,6 +24,8 @@ int main(void)
 	
 	alt_printf("leaving app1\n");
 
+
+
 	// s3k_init_malloc();
 
 	// char* dynamic_ints_a = s3k_simple_malloc(10); // 10 104+90 = 194
@@ -45,16 +41,16 @@ int main(void)
 	// alt_printf("Position of dyn int c: 0x%x\n\n", dynamic_ints_c);
 
 
-    // alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
+    alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
 	
-	// *(&__canary_metadata_pointer + 984) = 3;
-	// *(&__canary_metadata_pointer + 1484) = 2;
+	*(&__canary_metadata_pointer + 984) = 1;
+	*(&__canary_metadata_pointer + 1484) = 2;
 
-	// init_canary_table();
-	// add_canary((uint64_t*) (&__canary_metadata_pointer + 984));
-	// add_canary((uint64_t*) (&__canary_metadata_pointer + 1484));
-	// check_canary();
+	init_canary_table();
+	add_canary((uint64_t*) (&__canary_metadata_pointer + 984));
+	add_canary((uint64_t*) (&__canary_metadata_pointer + 1484));
+	check_canary((CanaryTable*) (&__canary_metadata_pointer));
 	// remove_canary((uint64_t*) (&__canary_metadata_pointer + 1484));
-	// read_canary(0);
+	read_canary(0);
 
 }
