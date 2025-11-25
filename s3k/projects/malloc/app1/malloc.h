@@ -29,6 +29,8 @@ void s3k_init_malloc();
 
 void* s3k_simple_malloc(uint64_t size);
 
+void* s3k_simple_malloc_random(uint64_t size);
+
 HeapObject* s3k_try_combine(HeapObject* start_object, uint64_t target_size);
 
 void s3k_try_trim_extend(HeapObject* object, uint64_t target_size);

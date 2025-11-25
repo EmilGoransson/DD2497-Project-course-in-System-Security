@@ -151,6 +151,64 @@ void* s3k_simple_malloc(uint64_t size){
     return (void*)0;
 }
 
+void* s3k_simple_malloc_random(uint64_t size){
+    init_random();
+    size += CANARY_SIZE;
+    if (size > (uint64_t)&__heap_size / get_num_heap_slots()){
+        (void*)0;
+    }
+    alt_printf("NUMBEER-OF-HEAP-SPLOTS: %d", get_num_heap_slots());
+    int rnd = next_random_int_v2(get_num_heap_slots());
+    alt_printf("Random start for heap: %d\n", rnd);
+
+    HeapObject* next = &s3k_heap->objects[0];
+    HeapObject* block_to_give = (HeapObject*)0;
+    int count = 1;
+    while(next && count++ < rnd){
+        next = next->next;
+    }
+    
+    while(next){
+
+        // (Find first possible entry)
+
+        // skip until nth entry
+        
+        
+        if(!next->is_used){
+            // If it is free and fits the object, use it
+            if(get_heap_object_size(*next) >= size){
+
+                s3k_try_trim_extend(next, size);
+                //next->is_used = true;
+                block_to_give = next;
+                break;
+                //return (void*)next->start_pos; 
+            }
+            // Otherwise, try to combine with next block
+            else{
+                block_to_give = s3k_try_combine(next, size);
+                if(block_to_give) break; //return (void*)combined->start_pos;
+            }
+        }
+        next = next->next;
+    }
+    /*
+    for(int i = 0; i < get_num_heap_slots(); i++){
+        if (!s3k_heap.objects[i].is_used){
+            s3k_heap.objects[i].is_used = true;
+            return (void*)s3k_heap.objects[i].start_pos;
+        }
+    }
+    */
+    if(block_to_give != 0){
+        block_to_give->is_used = true;
+        add_canary((uint64_t*) (block_to_give->end_pos-CANARY_SIZE));
+        return (void*)block_to_give->start_pos;
+    }
+    return (void*)0;
+}
+
 /* Slow and basic implementation of free */
 void s3k_simple_free(void* ptr){
     for(int i=0; i<get_num_heap_slots(); i++){

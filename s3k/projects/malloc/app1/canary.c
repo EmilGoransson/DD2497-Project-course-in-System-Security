@@ -58,8 +58,9 @@ Associates a canary with heap_canary_location (a memory address)).
 */
 void add_canary(uint64_t* heap_canary_location){
     CanaryObject new_canary;
+    //some random number (2^16)
     init_random();
-    new_canary.canary = next_random_int_v2(58142);
+    new_canary.canary = next_random_int_v2(65536);
     new_canary.heap_canary_pointer = heap_canary_location;
     internal_add_canary(new_canary);
 }
