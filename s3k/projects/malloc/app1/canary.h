@@ -1,6 +1,7 @@
 #pragma once
 #include "altc/altio.h"
 #include "s3k/s3k.h"
+#include "canary_trap.h"
 
 extern int __canaryTable_size;
 extern int __canary_metadata_pointer;

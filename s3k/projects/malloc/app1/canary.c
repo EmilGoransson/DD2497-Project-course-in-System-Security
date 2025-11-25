@@ -43,8 +43,10 @@ void internal_add_canary(CanaryObject canary){
         }
         free_index++;
     }
-    // alt_printf("Freeindex found by add_canary: %d\n", free_index);
+    // Temporarely unlock the metadata section
+    open_canary_metadata();
     canarytable->entries[free_index] = canary;
+    lock_canary_metadata();
     *canary.heap_canary_pointer = canary.canary;
 }
 

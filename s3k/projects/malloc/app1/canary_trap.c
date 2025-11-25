@@ -24,7 +24,7 @@ void init_canary_trap(){
     if(err){
         alt_printf("Could not derive PMP capability, error code: %x\n", err);
     }
-    lock_metadata();
+    lock_canary_metadata();
 	debug_capability_from_idx(pmp_cap_idx);
     setup_trap(canary_trap_handler, trap_stack, TRAP_STACK_SIZE);
 }
@@ -36,7 +36,9 @@ void init_canary_trap(){
     Wait, how do should be revert the PMP capablity? The handler will only run one time!
 */
 void canary_trap_handler(){
-    
+    alt_printf("ERROR: Tried to write to canary metadata without unlocking first\n");
+    while(true){};
+    /*
     uint64_t exception_address = s3k_reg_read(S3K_REG_EPC);
 
     // For now, assume that this function is 200 bytes large. Will need a better way
@@ -54,20 +56,24 @@ void canary_trap_handler(){
     else{
         alt_printf("NOT ALLOWED TO WRITE TO CANARY METADATA FROM 0x%x\n", exception_address);
     }
-    
-    //default_trap_handler(); // Defined?
+    */
 }
 
+
 // Sets the metadata to read only
-s3k_err_t lock_metadata(){
+void lock_canary_metadata(){
     s3k_err_t err = s3k_pmp_load(pmp_cap_idx, 0);
     s3k_sync_mem();
-    return err;
+    // We need to decide what should happen when something goes wrong, (process termination?)
+    // for now, I will just trap it in an infinite loop
+    while(err){}
 }
 
 // Sets the metadata to read-write
-s3k_err_t open_metadata(){
+void open_canary_metadata(){
     s3k_err_t err = s3k_pmp_unload(pmp_cap_idx);
     s3k_sync_mem();
-    return err;
+    if(err){
+        alt_printf("ERROR: Could not unlock canary metadata pmp region");
+    }
 }
