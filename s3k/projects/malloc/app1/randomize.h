@@ -4,4 +4,4 @@
 
 
 void init_random();
-int next_random_int_v2(int top);
+uint64_t next_random_int_v2(int top);

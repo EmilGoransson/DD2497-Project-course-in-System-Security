@@ -10,7 +10,9 @@ void init_random(){
 
     // Defines limits
     // Grab seed from get time and set as seed
-    seed = s3k_get_time();
+    
+    seed = 0x555555555^s3k_get_time();
+    alt_printf("Time, %d\n", s3k_get_time());
 
 }
 // Predictable max int = 4294967296 = 2^32, perhaps 2^64 instead

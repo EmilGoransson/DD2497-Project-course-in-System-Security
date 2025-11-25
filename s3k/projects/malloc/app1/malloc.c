@@ -25,6 +25,9 @@ void print_malloc_debug_info(char* title){
 }
 
 void s3k_init_malloc(){
+
+    init_random();
+
     // Set heap to point at
     s3k_heap = (MallocMatadata*)&__heap_metadata_pointer;
     //memset(s3k_heap, 0, sizeof(__heap_metadata_size));
@@ -151,23 +154,8 @@ void* s3k_simple_malloc(uint64_t size){
     return (void*)0;
 }
 
-void* s3k_simple_malloc_random(uint64_t size){
-    init_random();
-    size += CANARY_SIZE;
-    if (size > (uint64_t)&__heap_size / get_num_heap_slots()){
-        (void*)0;
-    }
-    alt_printf("NUMBEER-OF-HEAP-SPLOTS: %d", get_num_heap_slots());
-    int rnd = next_random_int_v2(get_num_heap_slots());
-    alt_printf("Random start for heap: %d\n", rnd);
-
-    HeapObject* next = &s3k_heap->objects[0];
-    HeapObject* block_to_give = (HeapObject*)0;
-    int count = 1;
-    while(next && count++ < rnd){
-        next = next->next;
-    }
-    
+HeapObject* s3k_simple_find_empty_slot(HeapObject* next, uint64_t size, bool forward){
+    HeapObject* find_avalible_block = (HeapObject*)0;
     while(next){
 
         // (Find first possible entry)
@@ -181,26 +169,46 @@ void* s3k_simple_malloc_random(uint64_t size){
 
                 s3k_try_trim_extend(next, size);
                 //next->is_used = true;
-                block_to_give = next;
+                find_avalible_block = next;
                 break;
                 //return (void*)next->start_pos; 
             }
             // Otherwise, try to combine with next block
             else{
-                block_to_give = s3k_try_combine(next, size);
-                if(block_to_give) break; //return (void*)combined->start_pos;
+                find_avalible_block = s3k_try_combine(next, size);
+                if(find_avalible_block) break; //return (void*)combined->start_pos;
             }
         }
+        if (forward) 
+            next = next->next;
+        else next = next->prev;
+    }
+    return find_avalible_block;
+}
+
+void* s3k_simple_malloc_random(uint64_t size){
+    size += CANARY_SIZE;
+    if (size > (uint64_t)&__heap_size / get_num_heap_slots()){
+        (void*)0;
+    }
+    int rnd = next_random_int_v2(get_num_heap_slots());
+    alt_printf("Random start for heap: %d\n", rnd);
+
+    HeapObject* next = &s3k_heap->objects[0];
+    HeapObject* block_to_give = (HeapObject*)0;
+
+    int count = 1;
+    while(next && count++ < rnd){
         next = next->next;
     }
-    /*
-    for(int i = 0; i < get_num_heap_slots(); i++){
-        if (!s3k_heap.objects[i].is_used){
-            s3k_heap.objects[i].is_used = true;
-            return (void*)s3k_heap.objects[i].start_pos;
-        }
+    // Walk forward from rnd
+    block_to_give = s3k_simple_find_empty_slot(next, size, true);
+    alt_printf("Block to give: %d", block_to_give);
+    // No empty slots after random. Loop back to 0 and check start
+    if (!block_to_give){
+        // Walk backwards from rnd
+       block_to_give = s3k_simple_find_empty_slot(next, size, false); 
     }
-    */
     if(block_to_give != 0){
         block_to_give->is_used = true;
         add_canary((uint64_t*) (block_to_give->end_pos-CANARY_SIZE));
