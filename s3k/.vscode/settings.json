@@ -3,6 +3,7 @@
         "canary_trap.h": "c",
         "utils.h": "c",
         "altio.h": "c",
-        "s3k.h": "c"
+        "s3k.h": "c",
+        "canary.h": "c"
     }
 }
