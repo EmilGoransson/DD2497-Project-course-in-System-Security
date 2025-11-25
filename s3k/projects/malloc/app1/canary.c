@@ -3,9 +3,11 @@
 
 extern int __canary_metadata_pointer;
 
-// For initiliziing canary table in a specific section
-// __attribute__((section(".canary_metadata"), used))
+// For initiliziing canary table in a specific section (I think this is it, now we initilize it in that section of memory instead of in .data)
+__attribute__((section(".canary_metadata"), used))
+// REMOVE THIS(?):
 // CanaryObject ctable[CANARY_TABLE_ENTRIES];
+
 static CanaryTable* canarytable;
 static int canarytable_head = -1;
 static int canarytable_free = 0;

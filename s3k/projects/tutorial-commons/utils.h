@@ -116,7 +116,7 @@ void s3k_print_cap(s3k_cap_t *cap) {
 		alt_printf("No Capability\n");
 		break;
 	case S3K_CAPTY_TIME:
-		alt_printf("Time hart:%X bgn:%X mrk:%X end:%Z\n",
+		alt_printf("Time hart:%X bgn:%X mrk:%X end:%d\n",
 				   (*cap).time.hart, (*cap).time.bgn, (*cap).time.mrk, (*cap).time.end);
 		break;
 	case S3K_CAPTY_MEMORY:
@@ -128,8 +128,11 @@ void s3k_print_cap(s3k_cap_t *cap) {
 				   );
 		break;
 	case S3K_CAPTY_PMP:
-		alt_printf("PMP rwx:%X used:%X index:%X address:%Z\n",
-				   (*cap).pmp.rwx, (*cap).pmp.used, (*cap).pmp.slot, (*cap).pmp.addr);
+		uint64_t pmp_start_pos;
+		uint64_t pmp_size;
+		s3k_napot_decode((*cap).pmp.addr, &pmp_start_pos, &pmp_size);
+		alt_printf("PMP rwx:%X used:%X index:%X address: 0x%X size: 0x%X\n",
+				   (*cap).pmp.rwx, (*cap).pmp.used, (*cap).pmp.slot, pmp_start_pos, pmp_size);
 		break;
 	case S3K_CAPTY_MONITOR:
 		alt_printf("Monitor  bgn:%X mrk:%X end:%X\n",
