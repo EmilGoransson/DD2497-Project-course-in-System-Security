@@ -8,12 +8,14 @@ extern int __canary_metadata_pointer;
 
 #define CANARY_TABLE_ENTRIES 256
 
+#define USE_TRAP 0 //maybe move to common .h file where each feature can be toggled
+
 // look at these again and change as necessary
 typedef struct{
-    //8 Bytes
-    uint64_t* heap_canary_pointer;
     //8 Bytes (can be 2 bytes, don't need more space rn)
     uint64_t canary;
+    //8 Bytes
+    uint64_t* heap_canary_pointer;
 } CanaryObject;
 
 typedef struct {

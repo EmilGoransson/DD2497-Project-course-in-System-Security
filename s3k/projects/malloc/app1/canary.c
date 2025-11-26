@@ -22,7 +22,9 @@ void init_canary_table(){
     //Change the current canaries to -1 as a starting value
     int i = 0;
     while(i != CANARY_TABLE_ENTRIES) {
-        canarytable->entries[i++].canary = -1;
+        canarytable->entries[i].canary = -1;
+        canarytable->entries[i].heap_canary_pointer = 0;
+        i++;
     }
 }
 
@@ -35,7 +37,7 @@ Used by add_canary
 */
 void internal_add_canary(CanaryObject canary){
     int free_index = 0;
-    while (canarytable->entries[free_index].canary != -1) {
+    while (canarytable->entries[free_index].heap_canary_pointer) {
         if (free_index == CANARY_TABLE_ENTRIES){
             //No freeindex found, cannot add new entry to canary table
             alt_printf("Error: could not add new canary to canarytable");
@@ -44,9 +46,13 @@ void internal_add_canary(CanaryObject canary){
         free_index++;
     }
     // Temporarely unlock the metadata section
+#if USE_TRAP
     open_canary_metadata();
+#endif
     canarytable->entries[free_index] = canary;
+#if USE_TRAP
     lock_canary_metadata();
+#endif
     *canary.heap_canary_pointer = canary.canary;
 }
 
@@ -80,7 +86,7 @@ bool check_canary(){
     bool same_canary = true;
 
     for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
-        if(canarytable->entries[i].canary != -1){
+        if(canarytable->entries[i].heap_canary_pointer){
             if(canarytable->entries[i].canary != *(canarytable->entries[i].heap_canary_pointer)){
                 same_canary = true;
                 alt_printf("ERROR CANARY AT: 0x%x\n", canarytable->entries[i].heap_canary_pointer);
@@ -114,7 +120,7 @@ void remove_canary(__uint64_t* heap_start){
 
     //Clear information about the object (Done by reference)
     rev_obj->canary = -1;
-    rev_obj->heap_canary_pointer = (__uint64_t*) 0xDEADBEEF; // <-- BORDE BARA NULLPTR?
+    rev_obj->heap_canary_pointer = (__uint64_t*)0;
     alt_printf("The in-memory object's canary: %d\n", canarytable->entries[i].canary);
 }
 
