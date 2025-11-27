@@ -17,6 +17,7 @@
 #define HART3_TIME 7
 #define MONITOR 8
 #define CHANNEL 9
+#define APP1_START 0x80020000
 
 extern int __heap_pointer;
 extern int __canary_pointer;
@@ -45,17 +46,23 @@ void setup_app1(uint64_t tmp)
 	*/
 
 	uint64_t uart_addr = s3k_napot_encode(UART0_BASE_ADDR, 0x8);
-	uint64_t app1_addr = s3k_napot_encode(0x80020000, 0x10000);
+	uint64_t app1_full_mem = s3k_napot_encode(APP1_START, 0x10000);
+	uint64_t app1_text_mem = s3k_napot_encode(APP1_START, 4096);
 
 	// Derive a PMP capability for app1 main memory
-	s3k_cap_derive(RAM_MEM, tmp, s3k_mk_pmp(app1_addr, S3K_MEM_RWX));
+	s3k_cap_derive(RAM_MEM, tmp, s3k_mk_pmp(app1_full_mem, S3K_MEM_RWX));
 	s3k_mon_cap_move(MONITOR, APP0_PID, tmp, APP1_PID, 0);
-	s3k_mon_pmp_load(MONITOR, APP1_PID, 0, 1);
+	s3k_mon_pmp_load(MONITOR, APP1_PID, 0, 2);
+
+	// Make .text non writable (must have higher priority ==> lower id than RWX pmp)
+	s3k_cap_derive(RAM_MEM, tmp, s3k_mk_pmp(app1_text_mem, S3K_MEM_RX));
+	s3k_mon_cap_move(MONITOR, APP0_PID, tmp, APP1_PID, 4);
+	s3k_mon_pmp_load(MONITOR, APP1_PID, 4, 1);
 
 	// Derive a PMP capability for uart
 	s3k_cap_derive(UART_MEM, tmp, s3k_mk_pmp(uart_addr, S3K_MEM_RW));
 	s3k_mon_cap_move(MONITOR, APP0_PID, tmp, APP1_PID, 1);
-	s3k_mon_pmp_load(MONITOR, APP1_PID, 1, 2);
+	s3k_mon_pmp_load(MONITOR, APP1_PID, 1, 3);
 
 	// derive a time slice capability
 	s3k_mon_cap_move(MONITOR, APP0_PID, HART1_TIME, APP1_PID, 2);
@@ -64,7 +71,7 @@ void setup_app1(uint64_t tmp)
 	s3k_mon_cap_move(MONITOR, APP0_PID, RAM_MEM, APP1_PID, 3);
 
 	// Write start PC of app1 to PC
-	s3k_mon_reg_write(MONITOR, APP1_PID, S3K_REG_PC, 0x80020000);
+	s3k_mon_reg_write(MONITOR, APP1_PID, S3K_REG_PC, APP1_START);
 
 	// Start app1
 	s3k_mon_resume(MONITOR, APP1_PID);
