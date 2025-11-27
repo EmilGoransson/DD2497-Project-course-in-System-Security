@@ -1,6 +1,8 @@
 #pragma once
 #include "altc/altio.h"
 #include "s3k/s3k.h"
+#include "canary_trap.h"
+#include "randomize.h"
 
 extern int __canaryTable_size;
 extern int __canary_metadata_pointer;
@@ -32,7 +34,6 @@ void internal_add_canary(CanaryObject canary);
 
 // Generate a new canary and place it in the heap
 void add_canary(__uint64_t* heap_address);
-int randomizer();
 
 //Initialize the canary table
 void init_canary_table();
@@ -42,3 +43,7 @@ void init_canary_table();
 void read_canary(__uint64_t read_canary);
 void size(CanaryTable* node);
 void test();
+
+// Temporary solution, we need a linker to solve this.
+// Exported variable
+//uint64_t internal_canary_end_addr;

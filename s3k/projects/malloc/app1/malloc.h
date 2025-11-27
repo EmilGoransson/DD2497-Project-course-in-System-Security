@@ -2,6 +2,7 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 #include "string.h"
+#include "canary.h"
 
 extern int __heap_pointer;
 extern int __heap_size;
@@ -27,6 +28,10 @@ void print_malloc_debug_info(char* title);
 void s3k_init_malloc();
 
 void* s3k_simple_malloc(uint64_t size);
+
+void* s3k_simple_malloc_random(uint64_t size);
+
+HeapObject* s3k_simple_find_empty_slot(HeapObject* next, uint64_t size, bool forward);
 
 HeapObject* s3k_try_combine(HeapObject* start_object, uint64_t target_size);
 

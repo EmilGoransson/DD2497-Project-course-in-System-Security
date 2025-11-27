@@ -1,16 +1,20 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 #include <string.h>
-#include "../utils.h"
-
+#include "../../tutorial-commons/utils.h"
 #include "../app1/malloc.h"
 #include "../app1/canary.h"
+
+extern int __heap_pointer;
+extern int __canary_pointer;
+extern int _end;
 
 void setup_apps()
 {
 	uint64_t uart_addr = s3k_napot_encode(UART0_BASE_ADDR, 0x8);
 	// Address regions for each app
 	uint64_t app1_addr = s3k_napot_encode(APP1_BASE_ADDR, APP1_LENGHT);
+	uint64_t app1_text_mem = s3k_napot_encode(APP1_BASE_ADDR, 4096);
 	uint64_t app2_addr = s3k_napot_encode(APP2_BASE_ADDR, APP2_LENGHT);
 
 	// MEMORY and PMP
@@ -21,12 +25,17 @@ void setup_apps()
 	uint32_t free_cap_idx = find_free_cap();
 	s3k_err_t a1 = s3k_cap_derive(RAM_MEM, free_cap_idx, s3k_mk_pmp(app1_addr, S3K_MEM_RWX));
 	s3k_err_t a2 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 0);
-	s3k_err_t a3 = s3k_mon_pmp_load(MONITOR, APP1_PID, 0, 0);
+	s3k_err_t a3 = s3k_mon_pmp_load(MONITOR, APP1_PID, 0, 15);
 	
+	// Make .text non writable (must have higher priority ==> lower id than RWX pmp)
+	s3k_cap_derive(RAM_MEM, free_cap_idx, s3k_mk_pmp(app1_text_mem, S3K_MEM_RX));
+	s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 4);
+	s3k_mon_pmp_load(MONITOR, APP1_PID, 4, 14);
+
 	// Derive a PMP capability for app2 main memory (APP2)
 	s3k_err_t a4 = s3k_cap_derive(RAM_MEM, free_cap_idx, s3k_mk_pmp(app2_addr, S3K_MEM_RWX));
 	s3k_err_t a5 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP2_PID, 0);
-	s3k_err_t a6 = s3k_mon_pmp_load(MONITOR, APP2_PID, 0, 0);
+	s3k_err_t a6 = s3k_mon_pmp_load(MONITOR, APP2_PID, 0, 15);
 
 
 	// Derive a PMP capability for app1's heap and canary table for app2 (APP2)
@@ -35,6 +44,14 @@ void setup_apps()
 	s3k_err_t mon_checking_err2 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP2_PID, 2);
 	s3k_err_t mon_checking_err3 = s3k_mon_pmp_load(MONITOR, APP2_PID, 2, 2);
 
+	/*
+		We reserve PMP slot 0 for the canary metadata section.
+		A better way would be to allocate PMP slots high-->low
+		so that subsections can have higher priority (lower slot).
+	*/
+
+	
+
 	// Send ALL of RAM to APP1 (APP1)
 	s3k_err_t mem2 = s3k_mon_cap_move(MONITOR, APP0_PID, RAM_MEM, APP1_PID, 2);
 	
@@ -42,7 +59,7 @@ void setup_apps()
 	// Derive a PMP capability for uart (APP1)
 	s3k_err_t b1 = s3k_cap_derive(UART_MEM, free_cap_idx, s3k_mk_pmp(uart_addr, S3K_MEM_RW));
 	s3k_err_t b2 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 1);
-	s3k_err_t b3 = s3k_mon_pmp_load(MONITOR, APP1_PID, 1, 1);
+	s3k_err_t b3 = s3k_mon_pmp_load(MONITOR, APP1_PID, 1, 3);
 	
 	// Derive a PMP capability for uart (APP2)
 	s3k_err_t b4 = s3k_cap_derive(UART_MEM, free_cap_idx, s3k_mk_pmp(uart_addr, S3K_MEM_RW));
@@ -80,11 +97,9 @@ void setup_apps()
 	// And sync the times (as tutorial.04 does)
 	s3k_sync();
 	
-	
 	// MONITOR
 	// derive a new monitor over app1 and app2 for app1
 	// How do you make a correct monitor app0?
-
 	s3k_err_t worked_init = s3k_cap_derive(MONITOR, free_cap_idx, s3k_mk_monitor(APP0_PID, APP1_PID));
 	// alt_printf("\n");
 	// debug_capability_from_idx(free_cap_idx);
@@ -98,8 +113,8 @@ void setup_apps()
 	}
 
 	// Write start PC of app1 and app2 to PC
-	s3k_mon_reg_write(MONITOR, APP1_PID, S3K_REG_PC, 0x80020000);
-	s3k_mon_reg_write(MONITOR, APP2_PID, S3K_REG_PC, 0x80030000);
+	s3k_mon_reg_write(MONITOR, APP1_PID, S3K_REG_PC, APP1_BASE_ADDR);
+	s3k_mon_reg_write(MONITOR, APP2_PID, S3K_REG_PC, APP2_BASE_ADDR);
 
 	// Start app1 and app2
 	s3k_mon_resume(MONITOR, APP1_PID);

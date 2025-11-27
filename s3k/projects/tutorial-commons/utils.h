@@ -1,3 +1,4 @@
+#pragma once
 #define APP0_PID 0
 #define APP1_PID 1
 
@@ -37,6 +38,7 @@
 #define APP_1_SIZE 0x10000
 #define SHARED_BUFFER_BASE (APP_1_BASE_ADDR+APP_1_SIZE)
 #define SHARED_BUFFER_SIZE 0x10000
+
 
 void setup_uart()
 {
