@@ -5,7 +5,6 @@
 
 // #include "../app1/malloc.h"
 #include "../app1/canary.h"
-
 extern int __canary_metadata_pointer;
 
 // Created since I couldn't access the canary table from app1 directly
@@ -64,7 +63,9 @@ int main(void)
 
 	// init_canary_table();
 	// s3k_init_malloc();
+	
 	monitor_app1();
+
 
     return 0;
 }

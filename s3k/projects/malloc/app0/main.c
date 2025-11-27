@@ -1,7 +1,7 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 #include <string.h>
-#include "../../tutorial-commons/utils.h"
+#include "../utils.h"
 #include "../app1/malloc.h"
 #include "../app1/canary.h"
 
@@ -25,17 +25,17 @@ void setup_apps()
 	uint32_t free_cap_idx = find_free_cap();
 	s3k_err_t a1 = s3k_cap_derive(RAM_MEM, free_cap_idx, s3k_mk_pmp(app1_addr, S3K_MEM_RWX));
 	s3k_err_t a2 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 0);
-	s3k_err_t a3 = s3k_mon_pmp_load(MONITOR, APP1_PID, 0, 15);
+	s3k_err_t a3 = s3k_mon_pmp_load(MONITOR, APP1_PID, 0, 7);
 	
-	// Make .text non writable (must have higher priority ==> lower id than RWX pmp)
+	// Make .text non writable (must have higher priority ==> lower id than RWX pmp) (APP1)
 	s3k_cap_derive(RAM_MEM, free_cap_idx, s3k_mk_pmp(app1_text_mem, S3K_MEM_RX));
 	s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 4);
-	s3k_mon_pmp_load(MONITOR, APP1_PID, 4, 14);
+	s3k_mon_pmp_load(MONITOR, APP1_PID, 4, 6);
 
 	// Derive a PMP capability for app2 main memory (APP2)
 	s3k_err_t a4 = s3k_cap_derive(RAM_MEM, free_cap_idx, s3k_mk_pmp(app2_addr, S3K_MEM_RWX));
 	s3k_err_t a5 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP2_PID, 0);
-	s3k_err_t a6 = s3k_mon_pmp_load(MONITOR, APP2_PID, 0, 15);
+	s3k_err_t a6 = s3k_mon_pmp_load(MONITOR, APP2_PID, 0, 7);
 
 
 	// Derive a PMP capability for app1's heap and canary table for app2 (APP2)

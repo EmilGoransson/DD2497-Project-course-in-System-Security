@@ -1,7 +1,7 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 #include <string.h>
-#include "../../tutorial-commons/utils.h"
+#include "../utils.h"
 
 #include "canary.h"
 #include "malloc.h"
@@ -33,6 +33,6 @@ int main(void)
 	memset(dynamic_ints_a, 0, 16); // Artificiall buffer overflow
 
     alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
-	
-	//check_canary();
+
+	//print_malloc_debug_info("--- After Mallov Heap Blocks ---");
 }

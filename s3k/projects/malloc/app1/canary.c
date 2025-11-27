@@ -2,7 +2,7 @@
 #include <string.h>
 #include "canary_trap.h"
 #include "randomize.h"
-#include "../../tutorial-commons/utils.h"
+#include "../utils.h"
 
 extern int __canary_metadata_pointer;
 
@@ -150,7 +150,7 @@ void test(){
 
 
 /* CANARY TRAP CODE */
-#define RAM_CAP 3
+#define RAM_CAP 2
 #define TRAP_STACK_SIZE 1024
 static char trap_stack[TRAP_STACK_SIZE];
 static uint32_t pmp_cap_idx;
@@ -207,7 +207,6 @@ void canary_trap_handler(){
     }
     */
 }
-
 
 // Sets the metadata to read only
 void lock_canary_metadata(){

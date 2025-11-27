@@ -1,8 +1,6 @@
 #pragma once
-#include "altc/altio.h"
 #include "s3k/s3k.h"
-#include "canary_trap.h"
-#include "randomize.h"
+#include "altc/altio.h"
 
 extern int __canaryTable_size;
 extern int __canary_metadata_pointer;
@@ -47,3 +45,8 @@ void test();
 // Temporary solution, we need a linker to solve this.
 // Exported variable
 //uint64_t internal_canary_end_addr;
+
+void init_canary_trap();
+//void canary_trap_handler();
+void lock_canary_metadata();
+void open_canary_metadata();

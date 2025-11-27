@@ -32,7 +32,7 @@
 #define FREE_CAP_END 20
 
 
-void setup_uart_app0()
+static inline void setup_uart_app0()
 {
 	uint64_t uart_addr = s3k_napot_encode(UART0_BASE_ADDR, 0x8);
 	// Derive a PMP capability for accessing UART
@@ -44,7 +44,7 @@ void setup_uart_app0()
 	s3k_sync_mem();
 }
 
-uint32_t find_free_cap() {
+static inline uint32_t find_free_cap() {
 	s3k_cap_t cap;
     for (uint32_t i = FREE_CAP_BEGIN; i <= FREE_CAP_END; i++) {
     	if (s3k_cap_read(i, &cap))
@@ -53,12 +53,20 @@ uint32_t find_free_cap() {
     return 0;
 }
 
+static inline void setup_trap(void (*trap_handler)(void), void * trap_stack_base, uint64_t trap_stack_size)
+{
+	// Sets the trap handler
+	s3k_reg_write(S3K_REG_TPC, (uint64_t)trap_handler);
+	// Set the trap stack
+	s3k_reg_write(S3K_REG_TSP, ((uint64_t)trap_stack_base) + trap_stack_size);
+}
+
 #define TAG_BLOCK_TO_ADDR(tag, block) ( \
 					(((uint64_t) tag) << S3K_MAX_BLOCK_SIZE) + \
 					(((uint64_t) block) << S3K_MIN_BLOCK_SIZE) \
 					)
 
-void s3k_print_cap(s3k_cap_t *cap) {
+static inline void s3k_print_cap(s3k_cap_t *cap) {
 	if (!cap)
 		alt_printf("Capability is NULL\n");
 	switch ((*cap).type) {
@@ -99,7 +107,7 @@ void s3k_print_cap(s3k_cap_t *cap) {
 	}
 }
 
-void debug_capability_from_idx(uint32_t cap_idx) {
+static inline void debug_capability_from_idx(uint32_t cap_idx) {
 	s3k_cap_t cap;
 	while (s3k_cap_read(cap_idx, &cap));
 	s3k_print_cap(&cap);

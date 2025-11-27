@@ -1,5 +1,9 @@
 #include "malloc.h"
-
+#include "altc/altio.h"
+#include "string.h"
+#include "canary.h"
+#include "string.h"
+#include "randomize.h"
 
 #define HEAP_OBJECT_MIN_SIZE 16
 #define HEAP_OBJECT_MAX_SIZE 512

@@ -1,8 +1,7 @@
+#include "randomize.h"
 #include "altc/altio.h"
-#include "s3k/s3k.h"
 
 uint64_t top_limit;
-uint64_t bottom_limit;
 // Last int or seed
 uint64_t  seed;
 
