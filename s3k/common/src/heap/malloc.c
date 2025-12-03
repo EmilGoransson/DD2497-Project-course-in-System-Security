@@ -1,9 +1,8 @@
-#include "malloc.h"
 #include "altc/altio.h"
 #include "string.h"
-#include "canary.h"
-#include "string.h"
-#include "randomize.h"
+#include "heap/malloc.h"
+#include "heap/canary.h"
+#include "heap/randomize.h"
 
 #define HEAP_OBJECT_MIN_SIZE 16
 #define HEAP_OBJECT_MAX_SIZE 512
@@ -38,15 +37,16 @@ void s3k_init_malloc(){
     // Set number of metadata objects
 
     s3k_heap->number_of_objects = ((uint64_t)(&__heap_metadata_size)-sizeof(s3k_heap->number_of_objects))/sizeof(s3k_heap->objects[0]);
-    alt_printf("Heap metadata objects: %d\n", s3k_heap->number_of_objects);
-    alt_printf("Heap pointer %x\n", &__heap_pointer);
-    alt_printf("Heap size %x\n", &__heap_size);
-    alt_printf("Heap size %x\n", &__heap_size);
-    alt_printf("Heap metadat pointer 0x%x\n", (void*)s3k_heap);
+    alt_printf("-------------MALLOC INIT--------------\n");
+    alt_printf("| Heap metadata objects: %d\n", s3k_heap->number_of_objects);
+    alt_printf("| Heap pointer %x\n", &__heap_pointer);
+    alt_printf("| Heap size %x\n", &__heap_size);
+    alt_printf("| Heap metadata pointer 0x%x\n", (void*)s3k_heap);
+    alt_printf("--------------------------------------\n");
+
     uint64_t heap_size = (uint64_t)&__heap_size;
     uint64_t heap_start = (uint64_t)&__heap_pointer;
     uint64_t object_size = heap_size / get_num_heap_slots();
-    alt_printf("Object size: %d\n", object_size);
     for(uint64_t i=0; i<s3k_heap->number_of_objects; i++){ // TO BE CHANGED
         s3k_heap->objects[i].start_pos = heap_start + i*object_size;
         s3k_heap->objects[i].end_pos = heap_start + (i+1)*object_size;
@@ -62,7 +62,7 @@ void s3k_init_malloc(){
     s3k_heap->objects[get_num_heap_slots()-1].next = (void*)0;
     
     // Debug print
-    print_malloc_debug_info("--- Initial Mallov Heap Blocks ---");
+    // print_malloc_debug_info("--- Initial Mallov Heap Blocks ---");
 }
 
 /*
@@ -103,8 +103,6 @@ HeapObject* s3k_try_combine(HeapObject* start_object, uint64_t target_size){
 */
 void s3k_try_trim_extend(HeapObject* object, uint64_t target_size){
     uint64_t object_size = get_heap_object_size(*object);
-    alt_printf("Object size: %d\n", object_size);
-    alt_printf("Object pos: 0x%x\n", object);
     HeapObject* next_object = object->next;
     if (object_size <= target_size || !(next_object))
         return;
@@ -196,7 +194,6 @@ void* s3k_simple_malloc_random(uint64_t size){
         (void*)0;
     }
     int rnd = next_random_int_v2(get_num_heap_slots());
-    alt_printf("Random start for heap: %d\n", rnd);
 
     HeapObject* next = &s3k_heap->objects[0];
     HeapObject* block_to_give = (HeapObject*)0;
@@ -207,7 +204,6 @@ void* s3k_simple_malloc_random(uint64_t size){
     }
     // Walk forward from rnd
     block_to_give = s3k_simple_find_empty_slot(next, size, true);
-    alt_printf("Block to give: %d", block_to_give);
     // No empty slots after random. Loop back to 0 and check start
     if (!block_to_give){
         // Walk backwards from rnd

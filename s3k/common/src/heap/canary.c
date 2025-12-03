@@ -1,7 +1,7 @@
-#include "canary.h"
 #include <string.h>
-#include "canary_trap.h"
-#include "randomize.h"
+#include "heap/canary.h"
+#include "heap/canary_trap.h"
+#include "heap/randomize.h"
 
 
 extern int __canary_metadata_pointer;
@@ -31,6 +31,11 @@ void init_canary_table(){
         canarytable->entries[i].heap_canary_pointer = 0;
         i++;
     }
+
+    alt_printf("-------------CANARY INIT--------------\n");
+    alt_printf("| Canary pointer: %x\n", &__canary_metadata_pointer);
+    alt_printf("| Canary objects: %d\n", CANARY_TABLE_ENTRIES);
+    alt_printf("--------------------------------------\n");
 }
 
 /*
@@ -64,8 +69,6 @@ void internal_add_canary(CanaryObject canary){
 /* 
 Creates a new entry into the "canarytable".
 Associates a canary with heap_canary_location (a memory address)).
-
-(for now no randomizer. "canary_value" is just incremental values, not secure)
 */
 void add_canary(uint64_t* heap_canary_location){
     CanaryObject new_canary;
@@ -87,22 +90,18 @@ uint64_t next_random_int(){
     return canary_value;
 }
 
-// Probably won't work for the monitor process. Will have to share the OG process canary table with the monitor process.
-// Right now it's made as if the process is checking itself
 bool check_canary(CanaryTable* target_table){
     bool same_canary = true;
 
     for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
-        if(canarytable->entries[i].heap_canary_pointer){
-            if(canarytable->entries[i].canary != *(canarytable->entries[i].heap_canary_pointer)){
-                same_canary = true;
-                alt_printf("ERROR CANARY AT: 0x%x\n", canarytable->entries[i].heap_canary_pointer);
-                alt_printf("BUFFER OVERFLOW. The canary was '%d', but now it's '%d' \n", canarytable->entries[i].canary, *(canarytable->entries[i].heap_canary_pointer));
+		if(target_table->entries[i].heap_canary_pointer){
+            int current_val = *(target_table->entries[i].heap_canary_pointer);
+            int expected_val = target_table->entries[i].canary;
+            if(expected_val != current_val){
+                return false;
             }
-        }
+		}
     }
-
-
     return same_canary;
 }
 
@@ -123,12 +122,11 @@ void remove_canary(__uint64_t* heap_start){
         
     }
     rev_obj = &(canarytable->entries[i]);
-    alt_printf("rev_obj canary: %d\n", rev_obj->canary);
 
     //Clear information about the object (Done by reference)
     rev_obj->canary = -1;
     rev_obj->heap_canary_pointer = (__uint64_t*)0;
-    alt_printf("The in-memory object's canary: %d\n", canarytable->entries[i].canary);
+    // alt_printf("The in-memory object's canary: %d\n", canarytable->entries[i].canary);
 }
 
 void read_canary(__uint64_t index){

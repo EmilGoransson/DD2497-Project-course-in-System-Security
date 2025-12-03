@@ -6,6 +6,8 @@
         "cstdint": "c",
         "s3k.h": "c",
         "canary.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "canary_trap.h": "c",
+        "randomize.h": "c"
     }
 }

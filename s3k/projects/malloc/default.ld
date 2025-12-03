@@ -8,8 +8,8 @@ SECTIONS {
 	.text : {
 		*( .init )
 		*( .text .text.* )
-		/* Allign end to 4096 (assume total length 4096) */
-		. = ALIGN(4096);
+		/* Allign end to 8192 (assume total length 8192) */
+		. = ALIGN(8192);
 	} > RAM
 
 	.heap_metadata : {

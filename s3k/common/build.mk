@@ -19,15 +19,18 @@ SRCS2OBJS=${patsubst src/%.S, ${BUILD}/%.o, ${filter %.S, ${1}}} \
 ALTC_SRCS :=${wildcard src/altc/*.[cS]}
 S3K_SRCS  :=${wildcard src/s3k/*.[cS]}
 START_SRCS:=${wildcard src/start/*.S}
+HEAP_SRCS :=${wildcard src/heap/*.[cS]}
 
 PLAT_OBJS :=${call SRCS2OBJS, ${PLAT_SRCS}}
 ALTC_OBJS :=${call SRCS2OBJS, ${ALTC_SRCS}}
 S3K_OBJS  :=${call SRCS2OBJS, ${S3K_SRCS}}
+HEAP_OBJS :=${call SRCS2OBJS, ${HEAP_SRCS}}
 START_OBJS:=${call SRCS2OBJS, ${START_SRCS}}
 
 TARGETS:=${BUILD}/libplat.a \
 	 ${BUILD}/libaltc.a \
 	 ${BUILD}/libs3k.a \
+	 ${BUILD}/libheap.a \
 	 ${START_OBJS}
 
 
@@ -35,6 +38,11 @@ all: ${TARGETS}
 
 clean:
 	rm -rf ${BUILD}
+
+${BUILD}/libheap.a: ${HEAP_OBJS}
+	@mkdir -p ${@D}
+	@${AR} cr $@ $^
+	@printf "AR\t$@\n"
 
 ${BUILD}/libplat.a: ${PLAT_OBJS}
 	@mkdir -p ${@D}

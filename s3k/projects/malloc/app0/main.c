@@ -1,13 +1,15 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 #include <string.h>
-#include "../utils.h"
-#include "../app1/malloc.h"
-#include "../app1/canary.h"
+
+#include "heap/utils.h"
+#include "heap/malloc.h"
+#include "heap/canary.h"
 
 extern int __heap_pointer;
 extern int __canary_pointer;
 extern int _end;
+
 
 void setup_apps()
 {
@@ -66,16 +68,16 @@ void setup_apps()
 	s3k_err_t b5 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP2_PID, 1);
 	s3k_err_t b6 = s3k_mon_pmp_load(MONITOR, APP2_PID, 1, 1);
 
-	if (a1 != S3K_SUCCESS || a2 != S3K_SUCCESS || a3 != S3K_SUCCESS ||
-		a4 != S3K_SUCCESS || a5 != S3K_SUCCESS || a6 != S3K_SUCCESS ||
-		b1 != S3K_SUCCESS || b2 != S3K_SUCCESS || b3 != S3K_SUCCESS ||
-		b4 != S3K_SUCCESS || b5 != S3K_SUCCESS || b6 != S3K_SUCCESS){
-			alt_printf("Failed app1/app2 PMP setup\n");
-		alt_printf("a1: %d, a2: %d, a3: %d\n", a1, a2, a3);
-		alt_printf("a4: %d, a5: %d, a6: %d\n", a4, a5, a6);
-		alt_printf("b1: %d, b2: %d, b3: %d\n", b1, b2, b3);
-		alt_printf("b4: %d, b5: %d, b6: %d\n", b4, b5, b6);
-	}
+	// if (a1 != S3K_SUCCESS || a2 != S3K_SUCCESS || a3 != S3K_SUCCESS ||
+	// 	a4 != S3K_SUCCESS || a5 != S3K_SUCCESS || a6 != S3K_SUCCESS ||
+	// 	b1 != S3K_SUCCESS || b2 != S3K_SUCCESS || b3 != S3K_SUCCESS ||
+	// 	b4 != S3K_SUCCESS || b5 != S3K_SUCCESS || b6 != S3K_SUCCESS){
+	// 		alt_printf("Failed app1/app2 PMP setup\n");
+	// 	alt_printf("a1: %d, a2: %d, a3: %d\n", a1, a2, a3);
+	// 	alt_printf("a4: %d, a5: %d, a6: %d\n", a4, a5, a6);
+	// 	alt_printf("b1: %d, b2: %d, b3: %d\n", b1, b2, b3);
+	// 	alt_printf("b4: %d, b5: %d, b6: %d\n", b4, b5, b6);
+	// }
 
 
 	// TIME

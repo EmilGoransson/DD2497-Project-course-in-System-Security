@@ -25,7 +25,7 @@ LDFLAGS:=-march=${ARCH} -mabi=${ABI} -mcmodel=${CMODEL} \
 	 -flto \
 	 -T${PROGRAM}.ld -Tdefault.ld \
 	 -Wl,--no-warn-rwx-segments \
-	 -L${COMMON_LIB} -ls3k -laltc -lplat \
+	 -L${COMMON_LIB} -ls3k -laltc -lplat -lheap \
 
 ELF:=${BUILD}/${PROGRAM}.elf
 BIN:=${ELF:.elf=.bin}

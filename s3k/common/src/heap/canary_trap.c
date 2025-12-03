@@ -2,8 +2,8 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 
-#include "canary_trap.h"
-#include "../utils.h"
+#include "heap/canary_trap.h"
+#include "heap/utils.h"
 
 extern int __canary_metadata_pointer;
 extern int __canaryTable_size;
@@ -32,7 +32,7 @@ void init_canary_trap(){
         alt_printf("Could not derive PMP capability, error code: %x\n", err);
     }
     lock_canary_metadata();
-	debug_capability_from_idx(pmp_cap_idx);
+	// debug_capability_from_idx(pmp_cap_idx);
     setup_trap(canary_trap_handler, trap_stack, TRAP_STACK_SIZE);
 }
 
