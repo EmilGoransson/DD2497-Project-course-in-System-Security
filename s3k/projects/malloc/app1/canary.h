@@ -7,7 +7,7 @@ extern int __canary_metadata_pointer;
 
 #define CANARY_TABLE_ENTRIES 256
 
-#define USE_TRAP 0 //maybe move to common .h file where each feature can be toggled
+#define USE_TRAP 1 //maybe move to common .h file where each feature can be toggled
 
 // look at these again and change as necessary
 typedef struct{

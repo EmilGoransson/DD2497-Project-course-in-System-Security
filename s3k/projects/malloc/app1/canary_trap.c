@@ -43,7 +43,8 @@ void init_canary_trap(){
     Wait, how do should be revert the PMP capablity? The handler will only run one time!
 */
 void canary_trap_handler(){
-    alt_printf("ERROR: Tried to write to canary metadata without unlocking first\n");
+    uint64_t exception_address = s3k_reg_read(S3K_REG_EPC);
+    alt_printf("ERROR: Tried to write to canary metadata without unlocking first at addr: 0x%x\n", exception_address);
     while(true){};
     /*
     uint64_t exception_address = s3k_reg_read(S3K_REG_EPC);
