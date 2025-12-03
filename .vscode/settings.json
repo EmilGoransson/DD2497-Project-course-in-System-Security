@@ -5,6 +5,7 @@
         "malloc.h": "c",
         "cstdint": "c",
         "s3k.h": "c",
-        "canary.h": "c"
+        "canary.h": "c",
+        "string.h": "c"
     }
 }

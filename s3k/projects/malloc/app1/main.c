@@ -1,7 +1,6 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 #include <string.h>
-#include "../utils.h"
 
 #include "canary.h"
 #include "malloc.h"
