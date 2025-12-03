@@ -1,7 +1,14 @@
+#include <string.h>
+#include "altc/altio.h"
+#include "s3k/s3k.h"
+
 #include "canary_trap.h"
-#include "../../tutorial-commons/utils.h"
-#define APP0_PID 0
-#define RAM_CAP 3
+#include "../utils.h"
+
+extern int __canary_metadata_pointer;
+extern int __canaryTable_size;
+/* CANARY TRAP CODE */
+#define RAM_CAP 2
 #define TRAP_STACK_SIZE 1024
 static char trap_stack[TRAP_STACK_SIZE];
 static uint32_t pmp_cap_idx;
@@ -58,7 +65,6 @@ void canary_trap_handler(){
     }
     */
 }
-
 
 // Sets the metadata to read only
 void lock_canary_metadata(){

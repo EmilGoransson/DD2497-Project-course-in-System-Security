@@ -1,7 +1,6 @@
 #pragma once
-#include "altc/altio.h"
 #include "s3k/s3k.h"
-#include "canary_trap.h"
+#include "altc/altio.h"
 
 extern int __canaryTable_size;
 extern int __canary_metadata_pointer;
@@ -25,7 +24,7 @@ typedef struct {
 
 
 //Compare Canary table entry with given_canary
-bool check_canary();
+bool check_canary(CanaryTable* target_table);
 
 //remove CanaryObject with heap_start from canary table
 void remove_canary(__uint64_t* heap_start);
@@ -35,7 +34,6 @@ void internal_add_canary(CanaryObject canary);
 
 // Generate a new canary and place it in the heap
 void add_canary(__uint64_t* heap_address);
-uint64_t next_random_int();
 
 //Initialize the canary table
 void init_canary_table();
@@ -49,3 +47,4 @@ void test();
 // Temporary solution, we need a linker to solve this.
 // Exported variable
 //uint64_t internal_canary_end_addr;
+

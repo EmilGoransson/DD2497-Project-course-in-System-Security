@@ -1,11 +1,16 @@
 #include "canary.h"
 #include <string.h>
+#include "canary_trap.h"
+#include "randomize.h"
+
 
 extern int __canary_metadata_pointer;
 
-// For initiliziing canary table in a specific section
-// __attribute__((section(".canary_metadata"), used))
+// For initiliziing canary table in a specific section (I think this is it, now we initilize it in that section of memory instead of in .data)
+__attribute__((section(".canary_metadata"), used))
+// REMOVE THIS(?):
 // CanaryObject ctable[CANARY_TABLE_ENTRIES];
+
 static CanaryTable* canarytable;
 static int canarytable_head = -1;
 static int canarytable_free = 0;
@@ -64,7 +69,9 @@ Associates a canary with heap_canary_location (a memory address)).
 */
 void add_canary(uint64_t* heap_canary_location){
     CanaryObject new_canary;
-    new_canary.canary = next_random_int();
+    //some random number (2^16)
+    init_random();
+    new_canary.canary = next_random_int_v2(65536);
     new_canary.heap_canary_pointer = heap_canary_location;
     internal_add_canary(new_canary);
 }
@@ -82,7 +89,7 @@ uint64_t next_random_int(){
 
 // Probably won't work for the monitor process. Will have to share the OG process canary table with the monitor process.
 // Right now it's made as if the process is checking itself
-bool check_canary(){
+bool check_canary(CanaryTable* target_table){
     bool same_canary = true;
 
     for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
@@ -146,3 +153,5 @@ void test(){
     alt_printf("Canary table initliazed\n");
     alt_printf("Size of canary table is %d bytes\n", sizeof(canarytable));
 }
+
+
