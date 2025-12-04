@@ -105,6 +105,7 @@ bool check_canary(CanaryTable* target_table){
     return same_canary;
 }
 
+// Does not work, needs to unlock canary-heap location before writing
 void remove_canary(__uint64_t* heap_start){
     CanaryObject* rev_obj;
     __uint8_t i = 0;
@@ -124,8 +125,12 @@ void remove_canary(__uint64_t* heap_start){
     rev_obj = &(canarytable->entries[i]);
 
     //Clear information about the object (Done by reference)
+    open_canary_metadata();
     rev_obj->canary = -1;
     rev_obj->heap_canary_pointer = (__uint64_t*)0;
+    lock_canary_metadata();
+
+
     // alt_printf("The in-memory object's canary: %d\n", canarytable->entries[i].canary);
 }
 
