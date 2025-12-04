@@ -227,11 +227,11 @@ void s3k_simple_free(void* ptr){
         uint64_t heap_size = (uint64_t)&__heap_size;
         uint64_t object_size = heap_size / get_num_heap_slots();
         if(s3k_heap->objects[i].is_used && (void*)s3k_heap->objects[i].start_pos == ptr){
-            int size = (s3k_heap->objects[i].end_pos-CANARY_SIZE) - s3k_heap->objects[i].start_pos;
-            memset(ptr, 0, size);
+            int size = (s3k_heap->objects[i].end_pos) - s3k_heap->objects[i].start_pos;
             alt_printf("size: %d\n", size);
             s3k_heap->objects[i].is_used = false;
             remove_canary((uint64_t*)(s3k_heap->objects[i].end_pos-CANARY_SIZE));
+            memset(ptr, 0, size);
             return;
         }
     }        
