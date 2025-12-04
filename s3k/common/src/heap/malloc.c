@@ -217,12 +217,17 @@ void* s3k_simple_malloc_random(uint64_t size){
     return (void*)0;
 }
 
-/* Slow and basic implementation of free */
+/* 
+Slow and basic implementation of free 
+Before freeing, memory is set to 0
+*/
 void s3k_simple_free(void* ptr){
     for(int i=0; i<get_num_heap_slots(); i++){
         uint64_t heap_size = (uint64_t)&__heap_size;
         uint64_t object_size = heap_size / get_num_heap_slots();
         if((void*)s3k_heap->objects[i].start_pos == ptr){
+            int size = (s3k_heap->objects[i].end_pos-CANARY_SIZE) - s3k_heap->objects[i].start_pos;
+            memset(ptr, 0, size);
             s3k_heap->objects[i].is_used = false;
             remove_canary((uint64_t*)(s3k_heap->objects[i].end_pos-CANARY_SIZE));
             return;
