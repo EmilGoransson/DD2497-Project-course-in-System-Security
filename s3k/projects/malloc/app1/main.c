@@ -21,5 +21,6 @@ int main(void)
 
     alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
 
+
 	//print_malloc_debug_info("--- After Mallov Heap Blocks ---");
 }

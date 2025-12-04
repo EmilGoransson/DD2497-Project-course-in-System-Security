@@ -26,6 +26,8 @@ void monitor_app1(){
 		alt_printf("All canaries intact in app1's canary table\n");
 	} else {
 		alt_printf("Canary check failed! Buffer overflow detected in app1's canary table\n");
+		s3k_mon_suspend(MONITOR, APP1_PID);
+
 		// while(1){} // Stop monitorin. We should also KILL app1?
 	}
 }
@@ -160,7 +162,7 @@ int main(void)
 	
 
 	setup_apps();
-
+	
 	while(1){
 		monitor_app1();
 	}
