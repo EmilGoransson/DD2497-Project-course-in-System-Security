@@ -6,8 +6,6 @@
 #include "heap/malloc.h"
 #include "heap/canary_trap.h"
 
-
-
 int main(void)
 {
 	init_canary_table();

@@ -7,7 +7,7 @@ export S3K_CONF_H :=${abspath s3k_conf.h}
 
 include ${ROOT}/tools.mk
 
-APPS=app0 app1 app2
+APPS=app0 app1
 
 ELFS:=${patsubst %, ${BUILD}/%.elf, kernel ${APPS}}
 
