@@ -42,6 +42,10 @@
 					(((uint64_t) block) << S3K_MIN_BLOCK_SIZE) \
 					)
 
+#define TRAP_STACK_SIZE 1024
+#define INSTRUCTION_SIZE 4
+#define TRAP_EPC_CONSTANT 1
+
 void setup_uart_app0();
 
 uint32_t find_free_cap();

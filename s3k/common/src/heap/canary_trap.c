@@ -3,13 +3,14 @@
 #include "s3k/s3k.h"
 
 #include "heap/canary_trap.h"
+#include "heap/canary.h"
 #include "heap/utils.h"
 
 extern int __canary_metadata_pointer;
 extern int __canaryTable_size;
+
 /* CANARY TRAP CODE */
-#define RAM_CAP 2
-#define TRAP_STACK_SIZE 1024
+#define RAM_CAP 2               // Update to RAM_MEM (which is defined in utils.h)
 static char trap_stack[TRAP_STACK_SIZE];
 static uint32_t pmp_cap_idx;
 
@@ -43,28 +44,41 @@ void init_canary_trap(){
     Wait, how do should be revert the PMP capablity? The handler will only run one time!
 */
 void canary_trap_handler(){
-    uint64_t exception_address = s3k_reg_read(S3K_REG_EPC);
-    alt_printf("ERROR: Tried to write to canary metadata without unlocking first at addr: 0x%x\n", exception_address);
-    while(true){};
-    /*
-    uint64_t exception_address = s3k_reg_read(S3K_REG_EPC);
+    // Set reg to 1 such that we can verify that we are in the trap handler
+    uint32_t* exception_address = (uint32_t*)s3k_reg_read(S3K_REG_EPC);
+    s3k_reg_write(S3K_REG_EPC, TRAP_EPC_CONSTANT);
 
-    // For now, assume that this function is 200 bytes large. Will need a better way
-    // of getting its size later. Probably have to do something with linker scripts.
-    uint64_t internal_canary_end_addr = 200 + (uint64_t)internal_add_canary;
-    // Test if caller is allowed to write to the canaries metadata
-    bool is_allowed_to_write = exception_address >= (uint64_t)internal_add_canary && 
-                                exception_address <= internal_canary_end_addr;
+    // Fix security function??? However that's supposed to be?? Check it's own trap handler stack??? Check that we're in the stack pointer
+    //
+    // if(s3k_reg_read(S3K_REG_SP) != s3k_reg_read(S3K_REG_TSP)){
+    //     alt_printf("ERROR: Canary trap handler executing from illegal context\n");
+    //     while(true){}
+    // }
+    
+    alt_printf("SP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_SP));
+    alt_printf("TSP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_TSP));
+    alt_printf("ESP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_ESP));
 
-    if(is_allowed_to_write){
-        // Set capability to be writable
-        alt_printf("OPENING PMP LOCK FOR CANARY METADATA \n");
-        open_metadata();
-    }
-    else{
-        alt_printf("NOT ALLOWED TO WRITE TO CANARY METADATA FROM 0x%x\n", exception_address);
-    }
-    */
+    open_canary_metadata();
+
+    // Part that either adds or removes canaries depending on instruction
+    //
+    // <==
+    CanaryObject canary = {
+        .canary = 0xDEEDBEEF,
+        .heap_canary_pointer = 0,
+    };
+    internal_add_canary(canary);
+
+    lock_canary_metadata();
+
+    // Return the EPC to the instruction after the exception
+    s3k_reg_write(S3K_REG_EPC, (uint64_t)exception_address + INSTRUCTION_SIZE);
+
+    // Debug print crashed instruction
+    alt_printf("INSTRUCTION THAT CRASHED: 0x%x\n", *exception_address);
+
+    while(1){}
 }
 
 // Sets the metadata to read only
@@ -83,7 +97,12 @@ void lock_canary_metadata(){
 void open_canary_metadata(){
     s3k_err_t err = s3k_pmp_unload(pmp_cap_idx);
     if(err){
-        alt_printf("ERROR: Could not unlock canary metadata pmp region");
+        alt_printf("ERROR: Could not unlock canary metadata pmp region\n");
     }
     s3k_sync_mem();
+    if(s3k_reg_read(S3K_REG_EPC) != TRAP_EPC_CONSTANT){
+        alt_printf("ERROR: Open canary metadata executing from illegal context\n");
+        while(true){}
+    }
+    
 }

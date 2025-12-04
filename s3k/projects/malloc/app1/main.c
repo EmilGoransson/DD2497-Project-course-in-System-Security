@@ -13,6 +13,10 @@ int main(void)
 	init_canary_table();
 	s3k_init_malloc();
 	init_canary_trap();
+  
+    alt_printf("OUTSIDE. SP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_SP));
+    alt_printf("OUTSIDE. TSP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_TSP));
+    alt_printf("OUTSIDE. ESP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_ESP));
 
 	char* dynamic_ints_a = s3k_simple_malloc_random(10); // 10 104+90 = 194
 	char* dynamic_ints_b = s3k_simple_malloc_random(200);
@@ -20,8 +24,9 @@ int main(void)
 	char* dynamic_ints_d = s3k_simple_malloc_random(4);
 	char* dynamic_ints_e = s3k_simple_malloc_random(200);
 	memset(dynamic_ints_a, 0, 16); // Artificiall buffer overflow
-
-    alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
+	
+ 	alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
+	//s3k_simple_free(dynamic_ints_b);
 
 	//print_malloc_debug_info("--- After Mallov Heap Blocks ---");
 }

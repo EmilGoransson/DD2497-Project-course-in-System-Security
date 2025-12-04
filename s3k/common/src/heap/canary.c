@@ -1,6 +1,5 @@
 #include <string.h>
 #include "heap/canary.h"
-#include "heap/canary_trap.h"
 #include "heap/randomize.h"
 
 
@@ -56,13 +55,8 @@ void internal_add_canary(CanaryObject canary){
         free_index++;
     }
     // Temporarely unlock the metadata section
-#if USE_TRAP
-    open_canary_metadata();
-#endif
+    //open_canary_metadata();
     canarytable->entries[free_index] = canary;
-#if USE_TRAP
-    lock_canary_metadata();
-#endif
     *canary.heap_canary_pointer = canary.canary;
 }
 
