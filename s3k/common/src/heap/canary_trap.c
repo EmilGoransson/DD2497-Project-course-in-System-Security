@@ -1,6 +1,7 @@
 #include <string.h>
 #include "altc/altio.h"
 #include "s3k/s3k.h"
+#include "s3k/kernel/inc/offsets.h"
 
 #include "heap/canary_trap.h"
 #include "heap/canary.h"
@@ -44,9 +45,12 @@ void init_canary_trap(){
     Wait, how do should be revert the PMP capablity? The handler will only run one time!
 */
 void canary_trap_handler(){
+    alt_printf("---- CANARY TRAP ----\n");
     // Set reg to 1 such that we can verify that we are in the trap handler
     uint32_t* exception_address = (uint32_t*)s3k_reg_read(S3K_REG_EPC);
     s3k_reg_write(S3K_REG_EPC, TRAP_EPC_CONSTANT);
+
+    alt_printf("2\n");
 
     // Fix security function??? However that's supposed to be?? Check it's own trap handler stack??? Check that we're in the stack pointer
     //
@@ -59,21 +63,32 @@ void canary_trap_handler(){
     alt_printf("TSP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_TSP));
     alt_printf("ESP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_ESP));
 
+    PROC_A0
+
     open_canary_metadata();
+    
+    alt_printf("3\n");
 
     // Part that either adds or removes canaries depending on instruction
     //
     // <==
+    uint64_t canary_value;
     CanaryObject canary = {
         .canary = 0xDEEDBEEF,
-        .heap_canary_pointer = 0,
+        .heap_canary_pointer = &canary_value,
     };
     internal_add_canary(canary);
 
+    alt_printf("4\n");
+
     lock_canary_metadata();
+
+    alt_printf("5\n");
 
     // Return the EPC to the instruction after the exception
     s3k_reg_write(S3K_REG_EPC, (uint64_t)exception_address + INSTRUCTION_SIZE);
+
+    
 
     // Debug print crashed instruction
     alt_printf("INSTRUCTION THAT CRASHED: 0x%x\n", *exception_address);
@@ -96,6 +111,7 @@ void lock_canary_metadata(){
 // Sets the metadata to read-write
 void open_canary_metadata(){
     s3k_err_t err = s3k_pmp_unload(pmp_cap_idx);
+    alt_printf("OPEN CANARY ERRNO: %d\n", err);
     if(err){
         alt_printf("ERROR: Could not unlock canary metadata pmp region\n");
     }

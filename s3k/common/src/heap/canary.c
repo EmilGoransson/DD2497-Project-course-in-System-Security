@@ -99,7 +99,7 @@ bool check_canary(CanaryTable* target_table){
     return same_canary;
 }
 
-void remove_canary(__uint64_t* heap_start){
+void remove_canary(__uint64_t* heap_start){ // Change heap_start variable name to something more fitting
     CanaryObject* rev_obj;
     __uint8_t i = 0;
     
