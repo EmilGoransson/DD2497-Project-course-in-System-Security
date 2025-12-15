@@ -15,14 +15,15 @@ extern int __canaryTable_size;
 static char trap_stack[TRAP_STACK_SIZE];
 static uint32_t pmp_cap_idx;
 
-// Look up what this does. Does it tell the linker that this function 
-// will be used as a trap handler and make it store / load all registers on stack?
-void canary_trap_handler(void) __attribute__((interrupt("machine")));
+
+void canary_trap_handler(); __attribute__((interrupt("machine")))
 
 /* 
     Initializes the trap
 */
 void init_canary_trap(){
+
+    //alt_printf("TRAP HANDLER ADDRESS: 0x%x\n", trap_handler);
     // Create the PMP capability
     pmp_cap_idx = find_free_cap();
     uint64_t canary_meta_start  = (uint64_t)&__canary_metadata_pointer;
@@ -35,7 +36,9 @@ void init_canary_trap(){
     }
     lock_canary_metadata();
 	// debug_capability_from_idx(pmp_cap_idx);
-    setup_trap(trap_entry_point, trap_stack, TRAP_STACK_SIZE);
+    // THIS FUNCTINO ACTIUALLY DOES TAKE ARUGMENTS, BUT WE ARE NOT ALLOWED TO 
+    // DEFINE IT AS SUCH!!!
+    setup_trap(canary_trap_handler, trap_stack, TRAP_STACK_SIZE);
 }
 
 /*
@@ -44,17 +47,25 @@ void init_canary_trap(){
     Wait, how do should be revert the PMP capablity? The handler will only run one time!
 */
 void canary_trap_handler(){
-    uint64_t a0_value;
-    __asm__ volatile("mv %0, a0" : "=r"(a0_value));
+    uint64_t original_s10;
+    uint64_t original_s11;
+    uint64_t original_a2;
 
-    alt_printf("NEW A0: 0x%x\n", a0_value);
+    // Read the physical registers directly into variables
+    __asm__ volatile("mv %0, s10" : "=r"(original_s10));
+    __asm__ volatile("mv %0, s11" : "=r"(original_s11));
+    __asm__ volatile("mv %0, a2" : "=r"(original_a2));
 
-    alt_printf("CURRENT STACK\n");
-    for(uint64_t* reg = (uint64_t*)trap_stack; reg<((uint64_t*)trap_stack)+30; reg++){
-        alt_printf("REGISTER: 0x%x\n", *reg);
-    }
-    alt_printf("PROC PID: %d\n", 0);
+    alt_printf("S10: 0x%x\n", original_s10);
+    alt_printf("S11: 0x%x\n", original_s11);
+    alt_printf("A2: 0x%x\n", original_a2);
     alt_printf("---- CANARY TRAP ----\n");
+    volatile uint64_t* sp = (uint64_t*)s3k_reg_read(S3K_REG_ESP);
+    alt_printf("CURRENT STACK\n");
+    int64_t offset = 0;
+
+    alt_printf("PROC PID: %d\n", 0);
+
     // Set reg to 1 such that we can verify that we are in the trap handler
     uint32_t* exception_address = (uint32_t*)s3k_reg_read(S3K_REG_EPC);
     s3k_reg_write(S3K_REG_EPC, TRAP_EPC_CONSTANT);
@@ -96,10 +107,10 @@ void canary_trap_handler(){
     // Return the EPC to the instruction after the exception
     s3k_reg_write(S3K_REG_EPC, (uint64_t)exception_address + INSTRUCTION_SIZE);
 
-    
+    alt_printf("6\n");    
 
     // Debug print crashed instruction
-    alt_printf("INSTRUCTION THAT CRASHED: 0x%x\n", *exception_address);
+    alt_printf("INSTRUCTION POINTER THAT CRASHED: 0x%x\n", exception_address);
 
     while(1){}
 }

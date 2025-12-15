@@ -44,6 +44,8 @@ void read_canary(__uint64_t read_canary);
 void size(CanaryTable* node);
 void test();
 
+void __attribute__((noinline)) crash(uint64_t value, uint64_t value2);
+
 // Temporary solution, we need a linker to solve this.
 // Exported variable
 //uint64_t internal_canary_end_addr;

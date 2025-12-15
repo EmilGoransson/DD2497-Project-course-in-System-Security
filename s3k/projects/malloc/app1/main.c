@@ -7,13 +7,13 @@
 #include "heap/canary_trap.h"
 
 
-
 int main(void)
 {
 	init_canary_table();
 	s3k_init_malloc();
 	init_canary_trap();
-  
+	crash(0xBEEF0002, 0xBEEF0001);
+	alt_printf("VALUE!!!!\n");
     alt_printf("OUTSIDE. SP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_SP));
     alt_printf("OUTSIDE. TSP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_TSP));
     alt_printf("OUTSIDE. ESP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_ESP));
