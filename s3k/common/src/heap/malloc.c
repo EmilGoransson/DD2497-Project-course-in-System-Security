@@ -187,17 +187,29 @@ HeapObject* s3k_simple_find_empty_slot(HeapObject* next, uint64_t size, bool for
     }
     return find_avalible_block;
 }
+bool check_memory_is_zeroed(uint64_t size, uint64_t memory_address){    
+    //memset((void*)memory_address, 1, size);
+    uint8_t *ptr = (uint8_t*)memory_address;
+    for (uint64_t i = 0; i<size; i++){
+        if(ptr[i] != 0){
+            return false;
+        }
+    }
+    return true;
+}
 
-void* s3k_simple_malloc_random(uint64_t size){
+void* s3k_simple_malloc_random(uint64_t size){ 
     size += CANARY_SIZE;
     if (size > (uint64_t)&__heap_size / get_num_heap_slots()){
         (void*)0;
     }
+
+
     int rnd = next_random_int_v2(get_num_heap_slots());
 
     HeapObject* next = &s3k_heap->objects[0];
     HeapObject* block_to_give = (HeapObject*)0;
-
+    uint64_t memory_address;
     int count = 1;
     while(next && count++ < rnd){
         next = next->next;
@@ -210,9 +222,13 @@ void* s3k_simple_malloc_random(uint64_t size){
        block_to_give = s3k_simple_find_empty_slot(next, size, false); 
     }
     if(block_to_give != 0){
-        block_to_give->is_used = true;
-        add_canary((uint64_t*) (block_to_give->end_pos-CANARY_SIZE));
-        return (void*)block_to_give->start_pos;
+        memory_address = block_to_give->end_pos-CANARY_SIZE;
+        // Check that memory is zeroed before allocating (USE AFTER FREE MITIGATION).
+        if (check_memory_is_zeroed(size-CANARY_SIZE, memory_address)){
+            block_to_give->is_used = true;
+            add_canary((uint64_t*)memory_address);
+            return (void*)block_to_give->start_pos; 
+        }
     }
     return (void*)0;
 }

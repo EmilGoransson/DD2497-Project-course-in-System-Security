@@ -28,6 +28,8 @@ void s3k_init_malloc();
 
 void* s3k_simple_malloc(uint64_t size);
 
+bool check_memory_is_zeroed(uint64_t size, uint64_t memory_address);
+
 void* s3k_simple_malloc_random(uint64_t size);
 
 HeapObject* s3k_simple_find_empty_slot(HeapObject* next, uint64_t size, bool forward);
