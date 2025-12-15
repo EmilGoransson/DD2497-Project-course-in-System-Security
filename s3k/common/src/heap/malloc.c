@@ -222,12 +222,15 @@ void* s3k_simple_malloc_random(uint64_t size){
        block_to_give = s3k_simple_find_empty_slot(next, size, false); 
     }
     if(block_to_give != 0){
-        memory_address = block_to_give->end_pos-CANARY_SIZE;
         // Check that memory is zeroed before allocating (USE AFTER FREE MITIGATION).
-        if (check_memory_is_zeroed(size-CANARY_SIZE, memory_address)){
+        if (check_memory_is_zeroed(size-CANARY_SIZE, block_to_give->start_pos)){
             block_to_give->is_used = true;
-            add_canary((uint64_t*)memory_address);
+            add_canary((uint64_t*)block_to_give->end_pos-CANARY_SIZE);
             return (void*)block_to_give->start_pos; 
+        }
+        else {
+            //DO SOMETHING?
+            alt_printf("INTEGRITY CHECK FAILED");
         }
     }
     return (void*)0;

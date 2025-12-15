@@ -23,7 +23,7 @@ void monitor_app1(){
 
 	bool same_canary = check_canary(app1_canary_table);
 	if(same_canary){
-		alt_printf("All canaries intact in app1's canary table\n");
+		// alt_printf("All canaries intact in app1's canary table\n");
 	} else {
 		alt_printf("Canary check failed! Buffer overflow detected in app1's canary table\n");
 
