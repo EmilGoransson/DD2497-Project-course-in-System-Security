@@ -12,6 +12,7 @@ __attribute__((section(".canary_metadata"), used))
 // CanaryObject ctable[CANARY_TABLE_ENTRIES];
 
 static CanaryTable* canarytable;
+static int active_canaries = 0;
 static int canarytable_head = -1;
 static int canarytable_free = 0;
 
@@ -46,15 +47,16 @@ else canary in use
 Used by add_canary
 */
 void internal_add_canary(CanaryObject canary){
-    int free_index = 0;
+    int free_index = next_random_int_v2(CANARY_TABLE_ENTRIES);
     while (canarytable->entries[free_index].heap_canary_pointer) {
-        if (free_index == CANARY_TABLE_ENTRIES){
+        if (active_canaries == CANARY_TABLE_ENTRIES){
             //No freeindex found, cannot add new entry to canary table
             alt_printf("Error: could not add new canary to canarytable");
             return;
         }
-        free_index++;
+        free_index = next_random_int_v2(CANARY_TABLE_ENTRIES);
     }
+    active_canaries++;
     // Temporarely unlock the metadata section
 #if USE_TRAP
     open_canary_metadata();
@@ -128,6 +130,7 @@ void remove_canary(__uint64_t* heap_start){
     open_canary_metadata();
     rev_obj->canary = -1;
     rev_obj->heap_canary_pointer = (__uint64_t*)0;
+    active_canaries--;
     lock_canary_metadata();
 
 
@@ -139,10 +142,11 @@ void read_canary(__uint64_t index){
 }
 
 void size(CanaryTable* node){
-    alt_printf("uint16 size in bytes %d\n", sizeof(uint16_t));
-    alt_printf("uint64 size in bytes %d\n", sizeof(uint64_t));
-    alt_printf("CanaryObject size in bytes %d\n", sizeof(CanaryObject));
-    alt_printf("CanaryTable size in bytes %d\n", sizeof(CanaryTable));
+    alt_printf("uint16 size in bytes: %d\n", sizeof(uint16_t));
+    alt_printf("uint64 size in bytes: %d\n", sizeof(uint64_t));
+    alt_printf("CanaryObject size in bytes: %d\n", sizeof(CanaryObject));
+    alt_printf("CanaryTable size in bytes: %d\n", sizeof(CanaryTable));
+    alt_printf("Currently used canaries: %d", active_canaries);
 }
 
 void test(){

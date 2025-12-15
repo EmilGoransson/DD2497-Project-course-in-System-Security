@@ -22,6 +22,8 @@ int main(void)
 
     alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
 
+	//To view the CanaryTable info
+	//size((CanaryTable*)0x80023000);
 
 	//print_malloc_debug_info("--- After Mallov Heap Blocks ---");
 }

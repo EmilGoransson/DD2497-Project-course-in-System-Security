@@ -18,7 +18,7 @@ typedef struct{
 } CanaryObject;
 
 typedef struct {
-    //16 Bytes 
+    //16 Bytes * 256 = 4096
     CanaryObject entries[CANARY_TABLE_ENTRIES];
 } CanaryTable;
 

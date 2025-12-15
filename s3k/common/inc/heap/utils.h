@@ -42,6 +42,10 @@
 					(((uint64_t) block) << S3K_MIN_BLOCK_SIZE) \
 					)
 
+//Wheter to Run APP1 and APP0 on the same core 
+#define RUN_SAME_CORE 1
+
+
 void setup_uart_app0();
 
 uint32_t find_free_cap();

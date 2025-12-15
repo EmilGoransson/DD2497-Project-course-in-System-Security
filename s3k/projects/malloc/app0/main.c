@@ -30,7 +30,7 @@ void monitor_app1(){
 		// Suspends overflown app
 		s3k_mon_suspend(MONITOR, APP1_PID);
 
-		while(1){} // Stop monitorin. 
+		while(1){} // Stop monitorin. We should also KILL app1?
 	}
 }
 
@@ -119,14 +119,19 @@ void setup_apps()
 	s3k_cap_delete(HART3_TIME);			// Not using core 4
 
 	free_cap_idx = find_free_cap();
-	// debug_capability_from_idx(HART1_TIME);
-														  // s3k_mk_time(hart_idx, start_time, end_time)
-	s3k_cap_derive(HART0_TIME, free_cap_idx, s3k_mk_time(0, 0, S3K_SLOT_CNT / 4));
-	// debug_capability_from_idx(HART1_TIME);
-	// debug_capability_from_idx(free_cap_idx);
+	if(RUN_SAME_CORE){
+		// debug_capability_from_idx(HART1_TIME);
+											  // s3k_mk_time(hart_idx, start_time, end_time)
+		s3k_cap_derive(HART0_TIME, free_cap_idx, s3k_mk_time(0, 0, S3K_SLOT_CNT / 4));
+		// debug_capability_from_idx(HART1_TIME);
+		// debug_capability_from_idx(free_cap_idx);
 
-	// Move the derived time slices to app1 and app2
-	s3k_err_t c1 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 3);
+		// Move the derived time slices to app1 and app2
+		s3k_err_t c1 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 3);
+	}
+	else{
+		s3k_mon_cap_move(MONITOR, APP0_PID, HART1_TIME, APP1_PID, 3);
+	}
 	// And sync the times (as tutorial.04 does)
 	s3k_sync();
 	
