@@ -73,7 +73,7 @@ void add_canary(uint64_t* heap_canary_location){
     internal_add_canary(new_canary);
 }
 
-void __attribute__((noinline)) crash(uint64_t argument, uint64_t value2){
+void __attribute__((noinline)) crash(uint64_t value1, uint64_t value2){
     /*
         This block has to be ONE inline assembly block
         to make sure the compiler does not reuse the 
@@ -83,8 +83,8 @@ void __attribute__((noinline)) crash(uint64_t argument, uint64_t value2){
         these registers.
     */
     __asm__ volatile(
-        "mv s10, %0\n\t"
-        "mv s11, %1\n\t"
+        "mv a0, %0\n\t"
+        "mv a1, %1\n\t"
         
         // ILLIGAL WRITE OPERATION TO CRASH THE PROGRAM,
         // This also HAS to be assembly to 
@@ -98,8 +98,8 @@ void __attribute__((noinline)) crash(uint64_t argument, uint64_t value2){
         "sw t1, 0(t0)"
         
         :
-        : "r"(argument), "r"(value2) /* Inputs */
-        : "s10", "s11", "t0", "t1", "memory"
+        : "r"(value1), "r"(value2) /* Inputs */
+        : "a0", "a1", "t0", "t1", "memory"
     );
 }
 

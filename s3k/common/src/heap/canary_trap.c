@@ -47,18 +47,22 @@ void init_canary_trap(){
     Wait, how do should be revert the PMP capablity? The handler will only run one time!
 */
 void canary_trap_handler(){
-    uint64_t original_s10;
-    uint64_t original_s11;
-    uint64_t original_a2;
+    uint64_t argument_1;
+    uint64_t argument_2;
 
-    // Read the physical registers directly into variables
-    __asm__ volatile("mv %0, s10" : "=r"(original_s10));
-    __asm__ volatile("mv %0, s11" : "=r"(original_s11));
-    __asm__ volatile("mv %0, a2" : "=r"(original_a2));
+    __asm__ volatile(
+        "mv %0, a0\n\t"
+        "mv %1, a1\n\t"
+        
+        : "=r"(argument_1), "=r"(argument_2)
+        : 
+        : "a0", "a1"
+    );
 
-    alt_printf("S10: 0x%x\n", original_s10);
-    alt_printf("S11: 0x%x\n", original_s11);
-    alt_printf("A2: 0x%x\n", original_a2);
+    alt_printf("Argument 1: 0x%x\n", argument_1);
+    alt_printf("Argument 2: 0x%x\n", argument_2);
+
+
     alt_printf("---- CANARY TRAP ----\n");
     volatile uint64_t* sp = (uint64_t*)s3k_reg_read(S3K_REG_ESP);
     alt_printf("CURRENT STACK\n");
