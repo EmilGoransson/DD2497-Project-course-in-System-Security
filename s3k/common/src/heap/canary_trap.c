@@ -1,7 +1,7 @@
 #include <string.h>
 #include "altc/altio.h"
 #include "s3k/s3k.h"
-#include "s3k/kernel/inc/offsets.h"
+//#include "s3k/kernel/inc/offsets.h"
 
 #include "heap/canary_trap.h"
 #include "heap/canary.h"
@@ -35,9 +35,8 @@ void init_canary_trap(){
     }
     lock_canary_metadata();
 	// debug_capability_from_idx(pmp_cap_idx);
-    setup_trap(canary_trap_handler, trap_stack, TRAP_STACK_SIZE);
+    setup_trap(trap_entry_point, trap_stack, TRAP_STACK_SIZE);
 }
-
 
 /*
     When program tries to write to canary, this handler will be invoked.
@@ -45,11 +44,22 @@ void init_canary_trap(){
     Wait, how do should be revert the PMP capablity? The handler will only run one time!
 */
 void canary_trap_handler(){
+    uint64_t a0_value;
+    __asm__ volatile("mv %0, a0" : "=r"(a0_value));
+
+    alt_printf("NEW A0: 0x%x\n", a0_value);
+
+    alt_printf("CURRENT STACK\n");
+    for(uint64_t* reg = (uint64_t*)trap_stack; reg<((uint64_t*)trap_stack)+30; reg++){
+        alt_printf("REGISTER: 0x%x\n", *reg);
+    }
+    alt_printf("PROC PID: %d\n", 0);
     alt_printf("---- CANARY TRAP ----\n");
     // Set reg to 1 such that we can verify that we are in the trap handler
     uint32_t* exception_address = (uint32_t*)s3k_reg_read(S3K_REG_EPC);
     s3k_reg_write(S3K_REG_EPC, TRAP_EPC_CONSTANT);
 
+    
     alt_printf("2\n");
 
     // Fix security function??? However that's supposed to be?? Check it's own trap handler stack??? Check that we're in the stack pointer
@@ -62,8 +72,6 @@ void canary_trap_handler(){
     alt_printf("SP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_SP));
     alt_printf("TSP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_TSP));
     alt_printf("ESP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_ESP));
-
-    PROC_A0
 
     open_canary_metadata();
     
