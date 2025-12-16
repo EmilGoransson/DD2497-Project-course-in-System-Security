@@ -18,12 +18,12 @@ int main(void)
 	char* dynamic_ints_c = s3k_simple_malloc_random(4);
 	char* dynamic_ints_d = s3k_simple_malloc_random(4);
 	char* dynamic_ints_e = s3k_simple_malloc_random(200);
-	memset(dynamic_ints_a, 0, 16); // Artificiall buffer overflow
+	//memset(dynamic_ints_a, 0, 16); // Artificiall buffer overflow
 
     alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
 
 	//To view the CanaryTable info
 	//size((CanaryTable*)0x80023000);
 
-	//print_malloc_debug_info("--- After Mallov Heap Blocks ---");
+	print_malloc_debug_info("--- After Mallov Heap Blocks ---");
 }

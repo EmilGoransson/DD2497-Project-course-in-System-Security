@@ -28,9 +28,7 @@ void print_malloc_debug_info(char* title){
 }
 
 void s3k_init_malloc(){
-
     init_random();
-
     // Set heap to point at
     s3k_heap = (MallocMatadata*)&__heap_metadata_pointer;
     //memset(s3k_heap, 0, sizeof(__heap_metadata_size));
@@ -225,7 +223,7 @@ void* s3k_simple_malloc_random(uint64_t size){
         // Check that memory is zeroed before allocating (USE AFTER FREE MITIGATION).
         if (check_memory_is_zeroed(size-CANARY_SIZE, block_to_give->start_pos)){
             block_to_give->is_used = true;
-            add_canary((uint64_t*)block_to_give->end_pos-CANARY_SIZE);
+            add_canary((uint64_t*)(block_to_give->end_pos - CANARY_SIZE));
             return (void*)block_to_give->start_pos; 
         }
         else {

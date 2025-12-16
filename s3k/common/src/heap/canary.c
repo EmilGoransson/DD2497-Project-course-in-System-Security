@@ -58,14 +58,15 @@ void internal_add_canary(CanaryObject canary){
     }
     active_canaries++;
     // Temporarely unlock the metadata section
-#if USE_TRAP
-    open_canary_metadata();
-#endif
-    canarytable->entries[free_index] = canary;
-#if USE_TRAP
-    lock_canary_metadata();
-#endif
+    // MAKE SURE TO WRITE BEFORE POINTING
     *canary.heap_canary_pointer = canary.canary;
+    #if USE_TRAP
+        open_canary_metadata();
+    #endif
+        canarytable->entries[free_index] = canary;
+    #if USE_TRAP
+        lock_canary_metadata();
+    #endif
 }
 
 /* 
@@ -93,18 +94,18 @@ uint64_t next_random_int(){
 }
 
 bool check_canary(CanaryTable* target_table){
-    bool same_canary = true;
-
     for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
-		if(target_table->entries[i].heap_canary_pointer){
-            int current_val = *(target_table->entries[i].heap_canary_pointer);
-            int expected_val = target_table->entries[i].canary;
+        if(target_table->entries[i].heap_canary_pointer){
+        
+            uint64_t current_val = *(target_table->entries[i].heap_canary_pointer);
+            uint64_t expected_val = target_table->entries[i].canary;
+            
             if(expected_val != current_val){
                 return false;
             }
-		}
+        }
     }
-    return same_canary;
+    return true;
 }
 
 // Does not work, needs to unlock canary-heap location before writing
