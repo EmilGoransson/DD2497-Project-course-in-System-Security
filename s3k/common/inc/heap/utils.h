@@ -2,6 +2,8 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 
+#define DEBUG_PRINT true
+
 #define UART0_BASE_ADDR (0x10000000ull)
 
 // Application process IDs and their memory layout

@@ -12,12 +12,8 @@ int main(void)
 	s3k_init_malloc();
 	init_canary_trap();
 
-	char* dynamic_ints_a = s3k_simple_malloc_random(10); // 10 104+90 = 194
-	char* dynamic_ints_b = s3k_simple_malloc_random(200);
-	char* dynamic_ints_c = s3k_simple_malloc_random(4);
-	char* dynamic_ints_d = s3k_simple_malloc_random(4);
-	char* dynamic_ints_e = s3k_simple_malloc_random(200);
-	memset(dynamic_ints_a, 0, 16); // Artificiall buffer overflow
+	char* dynamic_ints_a = s3k_simple_malloc_random(18);
+	memset(dynamic_ints_a, 0, 16);
 
     alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
 

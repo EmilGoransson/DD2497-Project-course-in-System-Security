@@ -3,7 +3,6 @@
 #include "heap/canary_trap.h"
 #include "heap/randomize.h"
 
-
 extern int __canary_metadata_pointer;
 
 // For initiliziing canary table in a specific section (I think this is it, now we initilize it in that section of memory instead of in .data)
@@ -55,6 +54,14 @@ void internal_add_canary(CanaryObject canary){
         }
         free_index++;
     }
+    alt_printf("--- Adding canary! ---\n");
+    alt_printf("| Value:   0x%x\n", canary.canary);
+    alt_printf("| Pointer: 0x%x\n", canary.heap_canary_pointer);
+    alt_printf("----------------------\n");
+    
+    // First write the value to the location 
+    // to avoid race conditions
+    *canary.heap_canary_pointer = canary.canary;
     // Temporarely unlock the metadata section
 #if USE_TRAP
     open_canary_metadata();
@@ -63,7 +70,7 @@ void internal_add_canary(CanaryObject canary){
 #if USE_TRAP
     lock_canary_metadata();
 #endif
-    *canary.heap_canary_pointer = canary.canary;
+    
 }
 
 /* 
@@ -98,6 +105,11 @@ bool check_canary(CanaryTable* target_table){
             int current_val = *(target_table->entries[i].heap_canary_pointer);
             int expected_val = target_table->entries[i].canary;
             if(expected_val != current_val){
+                alt_printf("------- Canary Check failed! Error details ------\n");
+                alt_printf("| Canary pointer: 0x%x \n", target_table->entries[i].heap_canary_pointer);
+                alt_printf("| Expected value: 0x%x \n", expected_val);
+                alt_printf("| Actual value:   0x%x \n", current_val);
+                alt_printf("-------------------------------------------------\n");
                 return false;
             }
 		}
