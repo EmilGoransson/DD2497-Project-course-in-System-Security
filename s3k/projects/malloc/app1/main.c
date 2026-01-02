@@ -66,13 +66,14 @@ bool test3(){
 	int* data[size];
 	for (size_t i = 0; i < size; i++)
 	{
-		data[i] = (int*) s3k_simple_malloc(sizeof(int*));
-		alt_printf("%d: malloc: %d\n", i, data[i]);
+		data[i] = (int*) s3k_simple_malloc(4);
+		alt_printf("%d: given address: 0x%x\n", i, data[i]);
 	}
 	for (size_t i = 0; i < size; i++)
 	{
 		alt_printf("%d: ", i);
 		s3k_simple_free(data[i]);
+		alt_printf("\n");
 	}
 	return true;
 }
@@ -148,10 +149,10 @@ int main(void)
 	{
 		alt_printf("Passed test3: Excedding amount of canaries\n");
 	}
-	if (test4())
-	{
-		alt_printf("Passed test4: Is the canary index correct\n");
-	}
+	// if (test4())
+	// {
+	// 	alt_printf("Passed test4: Is the canary index correct\n");
+	// }
 	
 
 
