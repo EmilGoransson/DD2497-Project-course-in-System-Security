@@ -50,13 +50,13 @@ else canary in use
 Used by add_canary
 */
 void internal_add_canary(CanaryObject canary){
+    if (active_canaries == CANARY_TABLE_ENTRIES){
+        //Cannot add a new entry to the canary table
+        alt_printf("Error: could not add new canary to canarytable");
+        return;
+    }
     int free_index = next_random_int_v2(CANARY_TABLE_ENTRIES); //0-251, 0-128, etc
     while (canarytable->entries[free_index].heap_canary_pointer) {
-        if (active_canaries == CANARY_TABLE_ENTRIES){
-            //No freeindex found, cannot add new entry to canary table
-            alt_printf("Error: could not add new canary to canarytable");
-            return;
-        }
         free_index++;
         if (free_index >= CANARY_TABLE_ENTRIES)
         {
