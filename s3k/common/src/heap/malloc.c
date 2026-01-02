@@ -6,9 +6,6 @@
 #include "heap/utils.h"
 
 
-#define HEAP_OBJECT_MIN_SIZE 16
-#define HEAP_OBJECT_MAX_SIZE 512
-
 #define CANARY_SIZE sizeof(((CanaryObject*)0)->canary) 
 
 // Placed on stack for now
@@ -132,8 +129,27 @@ void s3k_try_trim_extend(HeapObject* object, uint64_t target_size){
         alt_printf("\t| target size: %d\n", target_size);
         alt_printf("\t| object size: %d\n", object_size);
         #endif
-        object->end_pos = object->start_pos + target_size;
-        next_object->start_pos = object->end_pos;
+        // Add remaining space to a new block
+        // if the next block is used
+        HeapObject* free = find_empty_metadata_slot();
+        if(object->next->is_used && free){
+            HeapObject new = {
+                .next = object->next,
+                .prev = object,
+                .is_used = 0,
+                .start_pos = object->start_pos+target_size,
+                .end_pos = object->end_pos,
+            };
+            *free = new;
+            if(object->next)
+                object->next->prev = free;
+            object->next = free;
+            object->end_pos = new.start_pos;
+        }
+        else{
+            object->end_pos = object->start_pos + target_size;
+            next_object->start_pos = object->end_pos;
+        }
     }    
 }
 
@@ -239,6 +255,21 @@ int get_num_used_heap_objects(){
         num_used_blocks++;
     }
     return num_used_blocks;
+}
+
+/*
+    Returns the first empty metadataslot.
+    If there are no empty slots, return nullptr.
+*/
+HeapObject* find_empty_metadata_slot(){
+    uint64_t num_slots = get_num_heap_slots();
+    for(int i=0; i<num_slots; i++){
+        HeapObject* obj = &s3k_heap->objects[i];
+        if(obj->next == (HeapObject*)0 && obj->prev == (HeapObject*)0){
+            return obj;
+        }
+    }
+    return (HeapObject*)0;
 }
 
 void* s3k_simple_malloc_random(uint64_t size){ 
