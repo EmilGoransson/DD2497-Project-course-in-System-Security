@@ -3,6 +3,7 @@
 #include "heap/canary.h"
 #include "heap/canary_trap.h"
 #include "heap/randomize.h"
+#include "heap/utils.h"
 
 
 extern int __canary_metadata_pointer;
@@ -33,11 +34,12 @@ void init_canary_table(){
         canarytable->entries[i].heap_canary_pointer = 0;
         i++;
     }
-
+#if CANARY_DEBUG_PRINT
     alt_printf("-------------CANARY INIT--------------\n");
     alt_printf("| Canary pointer: %x\n", &__canary_metadata_pointer);
     alt_printf("| Canary objects: %d\n", CANARY_TABLE_ENTRIES);
     alt_printf("--------------------------------------\n");
+#endif
 }
 
 /*
@@ -49,6 +51,7 @@ Used by add_canary
 */
 void internal_add_canary(CanaryObject canary){
     int free_index = next_random_int_v2(CANARY_TABLE_ENTRIES);
+    int i=0;
     while (canarytable->entries[free_index].heap_canary_pointer) {
         if (active_canaries == CANARY_TABLE_ENTRIES){
             //No freeindex found, cannot add new entry to canary table
@@ -57,10 +60,12 @@ void internal_add_canary(CanaryObject canary){
         }
         free_index = next_random_int_v2(CANARY_TABLE_ENTRIES);
     }
+#if CANARY_DEBUG_PRINT
     alt_printf("-------------Adding canary--------------\n");
     alt_printf("| Pointer: 0x%x\n", canary.heap_canary_pointer);
     alt_printf("| Value:   0x%x\n", canary.canary);
     alt_printf("--------------------------------------\n");
+#endif
     active_canaries++;
     // Temporarely unlock the metadata section
     // MAKE SURE TO WRITE BEFORE POINTING
@@ -106,11 +111,13 @@ bool check_canary(CanaryTable* target_table){
             uint64_t expected_val = target_table->entries[i].canary;
             
             if(expected_val != current_val){
+#if CANARY_DEBUG_PRINT
                 alt_printf("-------------CANARY ERROR--------------\n");
                 alt_printf("| Pointer:  0x%x\n", heap_canary_pointer);
                 alt_printf("| Expected: 0x%x\n", expected_val);
                 alt_printf("| Actual:   0x%x\n", current_val);
                 alt_printf("--------------------------------------\n");
+#endif
                 return false;
             }
         }

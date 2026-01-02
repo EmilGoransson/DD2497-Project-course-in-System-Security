@@ -3,6 +3,8 @@
 #include "heap/malloc.h"
 #include "heap/canary.h"
 #include "heap/randomize.h"
+#include "heap/utils.h"
+
 
 #define HEAP_OBJECT_MIN_SIZE 16
 #define HEAP_OBJECT_MAX_SIZE 512
@@ -112,9 +114,6 @@ void s3k_try_trim_extend(HeapObject* object, uint64_t target_size){
 
 void* s3k_simple_malloc(uint64_t size){
     size += CANARY_SIZE;
-    if (size > (uint64_t)&__heap_size / get_num_heap_slots()){
-        (void*)0;
-    }
 
     HeapObject* next = &s3k_heap->objects[0];
     HeapObject* block_to_give = (HeapObject*)0;
@@ -123,7 +122,6 @@ void* s3k_simple_malloc(uint64_t size){
         if(!next->is_used){
             // If it is free and fits the object, use it
             if(get_heap_object_size(*next) >= size){
-
                 s3k_try_trim_extend(next, size);
                 //next->is_used = true;
                 block_to_give = next;
@@ -138,19 +136,20 @@ void* s3k_simple_malloc(uint64_t size){
         }
         next = next->next;
     }
-    /*
-    for(int i = 0; i < get_num_heap_slots(); i++){
-        if (!s3k_heap.objects[i].is_used){
-            s3k_heap.objects[i].is_used = true;
-            return (void*)s3k_heap.objects[i].start_pos;
-        }
-    }
-    */
+
     if(block_to_give != 0){
         block_to_give->is_used = true;
+#if MALLOC_DEBUG_PRINT
+        alt_printf("----- Found Heap Block -----\n");
+        alt_printf("| sp:   0x%x\n", block_to_give->start_pos);
+        alt_printf("| ep:   0x%x\n", block_to_give->end_pos);
+        alt_printf("| next: 0x%x\n", block_to_give->next);
+        alt_printf("----------------------------\n");
+#endif
         add_canary((uint64_t*) (block_to_give->end_pos-CANARY_SIZE));
         return (void*)block_to_give->start_pos;
     }
+
     return (void*)0;
 }
 
@@ -198,10 +197,6 @@ bool check_memory_is_zeroed(uint64_t size, uint64_t memory_address){
 
 void* s3k_simple_malloc_random(uint64_t size){ 
     size += CANARY_SIZE;
-    if (size > (uint64_t)&__heap_size / get_num_heap_slots()){
-        (void*)0;
-    }
-
 
     int rnd = next_random_int_v2(get_num_heap_slots());
 
