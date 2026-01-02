@@ -23,7 +23,7 @@ bool test1(){
 	
 	for (size_t i = 0; i < 101; i++)
 	{
-		Rec* dynamic_ints_a = (Rec*) s3k_simple_malloc_random(sizeof(Rec)); 
+		Rec* dynamic_ints_a = (Rec*) s3k_simple_malloc(sizeof(Rec)); 
 
 		dynamic_ints_a->height = rectangle.height;
 		dynamic_ints_a->lenght = rectangle.lenght;
@@ -49,7 +49,7 @@ bool test2(){
 		.ratio = 2
 	};
 
-	Rec* dynamic_ints_a = (Rec*) s3k_simple_malloc_random(sizeof(Rec)); 
+	Rec* dynamic_ints_a = (Rec*) s3k_simple_malloc(sizeof(Rec)); 
 	dynamic_ints_a->height = rectangle.height;
 	dynamic_ints_a->lenght = rectangle.lenght;
 	dynamic_ints_a->ratio = rectangle.ratio;
@@ -65,7 +65,7 @@ bool test3(){
 	int* data[20];
 	for (size_t i = 0; i < 20; i++)
 	{
-		data[i] = (int*) s3k_simple_malloc_random(sizeof(int*));
+		data[i] = (int*) s3k_simple_malloc(sizeof(int*));
 		alt_printf("malloc: %d\n", data[i]);
 	}
 	for (size_t i = 0; i < 20; i++)
@@ -83,7 +83,7 @@ bool test4(){
 		.ratio = 2
 	};
 
-	Rec* rect = (Rec*) s3k_simple_malloc_random(sizeof(Rec));
+	Rec* rect = (Rec*) s3k_simple_malloc(sizeof(Rec));
 	rect->height = rectangle.height;
 	rect->lenght = rectangle.lenght;
 	rect->ratio = rectangle.ratio;
@@ -117,10 +117,10 @@ int main(void)
 	{
 		alt_printf("Passed test3: Excedding amount of canaries\n");
 	}
-	// if (test4())
-	// {
-	// 	alt_printf("Passed test4: Is the canary index correct\n");
-	// }
+	if (test4())
+	{
+		alt_printf("Passed test4: Is the canary index correct\n");
+	}
 	
 
 

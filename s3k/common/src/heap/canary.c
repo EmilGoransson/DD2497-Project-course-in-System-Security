@@ -170,7 +170,7 @@ void remove_canary(__uint64_t* heap_start){
     //Add index to used_list
     used_index[i] = false;
     
-    alt_printf("Removed index%d to the table, active canaries=%d\n", available_slots[i], active_canaries);
+    alt_printf("Removed index%d from the table, active canaries=%d\n", i, active_canaries);
     //Redefine available slots (the values in this array is the available indexes in the table )
     uint8_t final_slot = CANARY_TABLE_ENTRIES-1;
     for (size_t i,j = 0; i < CANARY_TABLE_ENTRIES; i++)
