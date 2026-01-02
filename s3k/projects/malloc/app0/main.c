@@ -13,7 +13,7 @@ extern int _end;
 extern int __canary_metadata_pointer;
 
 void monitor_app1(){
-	// Get the offset of the canary table for each app
+	// Get the offset of the canary table for app0
 	uint64_t canary_table_offset = (uint64_t)&__canary_metadata_pointer - APP0_BASE_ADDR;
 	
 	// Get app1's canary table location

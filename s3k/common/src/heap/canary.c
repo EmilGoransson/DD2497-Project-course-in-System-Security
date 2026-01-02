@@ -13,6 +13,8 @@ __attribute__((section(".canary_metadata"), used))
 
 static CanaryTable* canarytable;
 static int active_canaries = 0;
+static bool used_index[CANARY_TABLE_ENTRIES] = {false};
+uint16_t available_slots[CANARY_TABLE_ENTRIES];
 static int canarytable_head = -1;
 static int canarytable_free = 0;
 
@@ -30,6 +32,7 @@ void init_canary_table(){
     while(i != CANARY_TABLE_ENTRIES) {
         canarytable->entries[i].canary = -1;
         canarytable->entries[i].heap_canary_pointer = 0;
+        available_slots[i] = i;
         i++;
     }
 
@@ -47,26 +50,49 @@ else canary in use
 Used by add_canary
 */
 void internal_add_canary(CanaryObject canary){
-    int free_index = next_random_int_v2(CANARY_TABLE_ENTRIES);
-    while (canarytable->entries[free_index].heap_canary_pointer) {
+    int total_available_slots = CANARY_TABLE_ENTRIES-active_canaries;
+    int free_index = next_random_int_v2(total_available_slots); //0-251, 0-128, etc
+    while (canarytable->entries[available_slots[free_index]].heap_canary_pointer) {
         if (active_canaries == CANARY_TABLE_ENTRIES){
             //No freeindex found, cannot add new entry to canary table
             alt_printf("Error: could not add new canary to canarytable");
             return;
         }
-        free_index = next_random_int_v2(CANARY_TABLE_ENTRIES);
+        free_index = next_random_int_v2(total_available_slots);
     }
-    active_canaries++;
+
     // Temporarely unlock the metadata section
     // MAKE SURE TO WRITE BEFORE POINTING
+    //Put canary value at the given adress 
     *canary.heap_canary_pointer = canary.canary;
     #if USE_TRAP
         open_canary_metadata();
     #endif
+        //Add canary object to the heap
         canarytable->entries[free_index] = canary;
     #if USE_TRAP
         lock_canary_metadata();
     #endif
+    active_canaries++;
+
+    //Add index to used_list
+    used_index[free_index] = true;
+    
+    alt_printf("Added index%d to the table, active canaries=%d\n", available_slots[free_index], active_canaries);
+
+    //Redefine available slots (the values in this array is the available indexes)
+    uint8_t final_slot = CANARY_TABLE_ENTRIES-1;
+    for (size_t i,j = 0; i < CANARY_TABLE_ENTRIES; i++)
+    {
+        //index in use? continue with next index
+        if(used_index[i]){
+            //Set the last at the end to 0
+            available_slots[final_slot--] = 0;
+            continue;
+        }
+        //For each used_index == true, this should reach total_available_slots eventually (always <=CANARY_TABLE_ENTRIES)
+        available_slots[j++] = i;
+    }
 }
 
 /* 
@@ -77,6 +103,8 @@ void add_canary(uint64_t* heap_canary_location){
     CanaryObject new_canary;
     //some random number (2^16)
     init_random();
+    
+    //Create canary object on stack 
     new_canary.canary = next_random_int_v2(65536);
     new_canary.heap_canary_pointer = heap_canary_location;
     internal_add_canary(new_canary);
@@ -94,6 +122,10 @@ uint64_t next_random_int(){
 }
 
 bool check_canary(CanaryTable* target_table){
+    if (active_canaries == 0)
+    {
+        return true;
+    }
     for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
         if(target_table->entries[i].heap_canary_pointer){
         
@@ -101,6 +133,7 @@ bool check_canary(CanaryTable* target_table){
             uint64_t expected_val = target_table->entries[i].canary;
             
             if(expected_val != current_val){
+                // alt_printf("Problem at index%d: curr val at %x: %d, expect:%d", i, target_table->entries[i].heap_canary_pointer, current_val, expected_val);
                 return false;
             }
         }
@@ -134,6 +167,23 @@ void remove_canary(__uint64_t* heap_start){
     active_canaries--;
     lock_canary_metadata();
 
+    //Add index to used_list
+    used_index[i] = false;
+    
+    alt_printf("Removed index%d to the table, active canaries=%d\n", available_slots[i], active_canaries);
+    //Redefine available slots (the values in this array is the available indexes in the table )
+    uint8_t final_slot = CANARY_TABLE_ENTRIES-1;
+    for (size_t i,j = 0; i < CANARY_TABLE_ENTRIES; i++)
+    {
+        //index in use? continue with next index
+        if(used_index[i]){
+            //Set the last at the end to 0
+            available_slots[final_slot--] = 0;
+            continue;
+        }
+        //For each used_index == true, this should reach total_available_slots eventually (always <=CANARY_TABLE_ENTRIES)
+        available_slots[j++] = i;
+    }
 
     // alt_printf("The in-memory object's canary: %d\n", canarytable->entries[i].canary);
 }
