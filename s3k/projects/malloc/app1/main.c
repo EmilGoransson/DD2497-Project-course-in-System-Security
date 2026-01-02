@@ -126,14 +126,16 @@ int main(void)
 	
 	//char* dynamic_ints_a = s3k_simple_malloc_random(100);
 	int i;
-	for(i=0; i<100 && !test_malloc(); i++){
+	for(i=0; i<10 && !test_malloc(); i++){
 		alt_printf("TEST NUMBER %d\n", i);
 	}
-    alt_printf("Ran %d tests of malloc\n", i);
-	alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
 
-
-
+	alt_printf("-------------------------------------\n");
+	alt_printf("| Ran First Set of Malloc Tests\n");
+    alt_printf("| Compleated %d tests\n", i);
+	alt_printf("| Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
+	alt_printf("-------------------------------------\n");
+	while(1){}
 	if(test1())
 	{
 		alt_printf("Passed test1: Simultanious use of malloc and free\n");

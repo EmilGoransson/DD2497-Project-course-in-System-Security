@@ -246,5 +246,5 @@ void s3k_simple_free(void* ptr){
             memset(ptr, 0, size);
             return;
         }
-    }        
+    }
 }
