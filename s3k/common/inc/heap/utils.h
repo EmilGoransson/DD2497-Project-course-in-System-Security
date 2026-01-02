@@ -2,6 +2,11 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 
+// Define debug print levels
+#define MALLOC_DEBUG_PRINT true
+#define CANARY_DEBUG_PRINT true
+
+
 #define UART0_BASE_ADDR (0x10000000ull)
 
 // Application process IDs and their memory layout

@@ -1,7 +1,9 @@
 #include <string.h>
+#include <stdatomic.h>
 #include "heap/canary.h"
 #include "heap/canary_trap.h"
 #include "heap/randomize.h"
+#include "heap/utils.h"
 
 
 extern int __canary_metadata_pointer;
@@ -35,11 +37,12 @@ void init_canary_table(){
         available_slots[i] = i;
         i++;
     }
-
+#if CANARY_DEBUG_PRINT
     alt_printf("-------------CANARY INIT--------------\n");
     alt_printf("| Canary pointer: %x\n", &__canary_metadata_pointer);
     alt_printf("| Canary objects: %d\n", CANARY_TABLE_ENTRIES);
     alt_printf("--------------------------------------\n");
+#endif
 }
 
 /*
@@ -60,10 +63,20 @@ void internal_add_canary(CanaryObject canary){
         }
         free_index = next_random_int_v2(total_available_slots);
     }
-
+#if CANARY_DEBUG_PRINT
+    alt_printf("-------------Adding canary--------------\n");
+    alt_printf("| Pointer:      0x%x\n", canary.heap_canary_pointer);
+    alt_printf("| Value:        0x%x\n", canary.canary);
+    alt_printf("| Metadata pos: 0x%x\n", &canarytable->entries[available_slots[free_index]]);
+    alt_printf("| --- Previous Data At Pos ---\n");
+    alt_printf("| Pointer:      0x%x\n", canarytable->entries[free_index].heap_canary_pointer);
+    alt_printf("| Value:        0x%x\n", canarytable->entries[free_index].canary);
+    alt_printf("--------------------------------------\n");
+#endif
+    active_canaries++;
     // Temporarely unlock the metadata section
     // MAKE SURE TO WRITE BEFORE POINTING
-    //Put canary value at the given adress 
+    //Put canary value at the given adress
     *canary.heap_canary_pointer = canary.canary;
     #if USE_TRAP
         open_canary_metadata();
@@ -80,19 +93,6 @@ void internal_add_canary(CanaryObject canary){
     
     alt_printf("Added index%d to the table, active canaries=%d\n", available_slots[free_index], active_canaries);
 
-    //Redefine available slots (the values in this array is the available indexes)
-    uint8_t final_slot = CANARY_TABLE_ENTRIES-1;
-    for (size_t i,j = 0; i < CANARY_TABLE_ENTRIES; i++)
-    {
-        //index in use? continue with next index
-        if(used_index[i]){
-            //Set the last at the end to 0
-            available_slots[final_slot--] = 0;
-            continue;
-        }
-        //For each used_index == true, this should reach total_available_slots eventually (always <=CANARY_TABLE_ENTRIES)
-        available_slots[j++] = i;
-    }
 }
 
 /* 
@@ -127,12 +127,19 @@ bool check_canary(CanaryTable* target_table){
         return true;
     }
     for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
-        if(target_table->entries[i].heap_canary_pointer){
-        
-            uint64_t current_val = *(target_table->entries[i].heap_canary_pointer);
+        volatile uint64_t* heap_canary_pointer = target_table->entries[i].heap_canary_pointer;
+        if(heap_canary_pointer != 0){
+            uint64_t current_val = *(heap_canary_pointer);
             uint64_t expected_val = target_table->entries[i].canary;
             
             if(expected_val != current_val){
+#if CANARY_DEBUG_PRINT
+                alt_printf("-------------CANARY ERROR--------------\n");
+                alt_printf("| Pointer:  0x%x\n", heap_canary_pointer);
+                alt_printf("| Expected: 0x%x\n", expected_val);
+                alt_printf("| Actual:   0x%x\n", current_val);
+                alt_printf("--------------------------------------\n");
+#endif
                 // alt_printf("Problem at index%d: curr val at %x: %d, expect:%d", i, target_table->entries[i].heap_canary_pointer, current_val, expected_val);
                 return false;
             }
@@ -143,8 +150,12 @@ bool check_canary(CanaryTable* target_table){
 
 // Does not work, needs to unlock canary-heap location before writing
 void remove_canary(__uint64_t* heap_start){
+    #if CANARY_DEBUG_PRINT
+    alt_printf("Removing Canary at 0x%x\n", heap_start);
+    #endif
+    
     CanaryObject* rev_obj;
-    __uint8_t i = 0;
+    int i = 0;
     
     //Find CanaryObject in canarytable
     //iterate the list until heap_start indicator is found
@@ -156,21 +167,18 @@ void remove_canary(__uint64_t* heap_start){
             alt_printf("Object not found, cant remove\nReturning...\n");
             return;
         }
-        
     }
-    rev_obj = &(canarytable->entries[i]);
 
     //Clear information about the object (Done by reference)
     open_canary_metadata();
-    rev_obj->canary = -1;
-    rev_obj->heap_canary_pointer = (__uint64_t*)0;
+    canarytable->entries[i].heap_canary_pointer = (__uint64_t*) 0;
     active_canaries--;
     lock_canary_metadata();
 
     //Add index to used_list
     used_index[i] = false;
     
-    alt_printf("Removed index%d from the table, active canaries=%d\n", i, active_canaries);
+    alt_printf("Removed index %d from the table, active canaries=%d\n", i, active_canaries);
     //Redefine available slots (the values in this array is the available indexes in the table )
     uint8_t final_slot = CANARY_TABLE_ENTRIES-1;
     for (size_t i,j = 0; i < CANARY_TABLE_ENTRIES; i++)
