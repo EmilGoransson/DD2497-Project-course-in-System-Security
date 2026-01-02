@@ -91,8 +91,6 @@ void internal_add_canary(CanaryObject canary){
     //Add index to used_list
     used_index[free_index] = true;
     
-    alt_printf("Added index%d to the table, active canaries=%d\n", available_slots[free_index], active_canaries);
-
 }
 
 /* 
@@ -164,7 +162,6 @@ void remove_canary(__uint64_t* heap_start){
         i++;
         if (i > CANARY_TABLE_ENTRIES)
         {
-            alt_printf("Object not found, cant remove\nReturning...\n");
             return;
         }
     }

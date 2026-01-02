@@ -100,11 +100,11 @@ bool test4(){
 	
 
 bool test_malloc(){
-	int sizes[] = {100, 100, 2, 2, 7, 100, 7, 69, 42, 96, 69, 1, 99, 2, 0};
+	int sizes[] = {100, 100, 1, 99, 69, 1, 69, 1, 69, 1, 69, 0};
 	void* malloc_blocks[sizeof(sizes)/sizeof(sizes[0]) -1];
 	for(int i=0, size=sizes[0]; size != 0; i++, size=sizes[i]){
-		//print_malloc_debug_info("--- Malloc heap blocks ---");
-		void* ptr = s3k_simple_malloc(size);
+		print_malloc_debug_info("--- Malloc heap blocks ---");
+		void* ptr = s3k_simple_malloc_random(size);
 		malloc_blocks[i] = ptr;
 		if(ptr==(void*)0){
 			alt_printf("MALLOC ERROR, GOT NULLPTR!\n");
@@ -126,7 +126,7 @@ int main(void)
 	
 	//char* dynamic_ints_a = s3k_simple_malloc_random(100);
 	int i;
-	for(i=0; i<10 && !test_malloc(); i++){
+	for(i=0; i<100 && !test_malloc(); i++){
 		alt_printf("TEST NUMBER %d\n", i);
 	}
 
