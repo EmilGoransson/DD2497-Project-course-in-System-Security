@@ -62,14 +62,16 @@ bool test2(){
 
 //Test3: Excedding amount of canaries
 bool test3(){
-	int* data[20];
-	for (size_t i = 0; i < 20; i++)
+	int size = 100;
+	int* data[size];
+	for (size_t i = 0; i < size; i++)
 	{
 		data[i] = (int*) s3k_simple_malloc(sizeof(int*));
-		alt_printf("malloc: %d\n", data[i]);
+		alt_printf("%d: malloc: %d\n", i, data[i]);
 	}
-	for (size_t i = 0; i < 20; i++)
+	for (size_t i = 0; i < size; i++)
 	{
+		alt_printf("%d: ", i);
 		s3k_simple_free(data[i]);
 	}
 	return true;
