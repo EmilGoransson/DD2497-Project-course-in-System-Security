@@ -1,4 +1,5 @@
 #include <string.h>
+#include <stdatomic.h>
 #include "heap/canary.h"
 #include "heap/canary_trap.h"
 #include "heap/randomize.h"
@@ -56,6 +57,10 @@ void internal_add_canary(CanaryObject canary){
         }
         free_index = next_random_int_v2(CANARY_TABLE_ENTRIES);
     }
+    alt_printf("-------------Adding canary--------------\n");
+    alt_printf("| Pointer: 0x%x\n", canary.heap_canary_pointer);
+    alt_printf("| Value:   0x%x\n", canary.canary);
+    alt_printf("--------------------------------------\n");
     active_canaries++;
     // Temporarely unlock the metadata section
     // MAKE SURE TO WRITE BEFORE POINTING
@@ -95,12 +100,17 @@ uint64_t next_random_int(){
 
 bool check_canary(CanaryTable* target_table){
     for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
-        if(target_table->entries[i].heap_canary_pointer){
-        
-            uint64_t current_val = *(target_table->entries[i].heap_canary_pointer);
+        volatile uint64_t* heap_canary_pointer = target_table->entries[i].heap_canary_pointer;
+        if(heap_canary_pointer != 0){
+            uint64_t current_val = *(heap_canary_pointer);
             uint64_t expected_val = target_table->entries[i].canary;
             
             if(expected_val != current_val){
+                alt_printf("-------------CANARY ERROR--------------\n");
+                alt_printf("| Pointer:  0x%x\n", heap_canary_pointer);
+                alt_printf("| Expected: 0x%x\n", expected_val);
+                alt_printf("| Actual:   0x%x\n", current_val);
+                alt_printf("--------------------------------------\n");
                 return false;
             }
         }
@@ -125,12 +135,10 @@ void remove_canary(__uint64_t* heap_start){
         }
         
     }
-    rev_obj = &(canarytable->entries[i]);
 
     //Clear information about the object (Done by reference)
     open_canary_metadata();
-    rev_obj->canary = -1;
-    rev_obj->heap_canary_pointer = (__uint64_t*)0;
+    canarytable->entries[i].heap_canary_pointer = (__uint64_t*) 0;
     active_canaries--;
     lock_canary_metadata();
 
