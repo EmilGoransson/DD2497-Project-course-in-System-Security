@@ -54,15 +54,15 @@ Used by add_canary
 */
 void internal_add_canary(CanaryObject canary){
     int total_available_slots = CANARY_TABLE_ENTRIES-active_canaries;
-    int free_index = next_random_int_v2(total_available_slots); //0-251, 0-128, etc
-    while (canarytable->entries[available_slots[free_index]].heap_canary_pointer) {
+    int free_index = 0;//next_random_int_v2(total_available_slots); //0-251, 0-128, etc
+    /*while (canarytable->entries[available_slots[free_index]].heap_canary_pointer) {
         if (active_canaries == CANARY_TABLE_ENTRIES){
             //No freeindex found, cannot add new entry to canary table
             alt_printf("Error: could not add new canary to canarytable");
             return;
         }
         free_index = next_random_int_v2(total_available_slots);
-    }
+    }*/
 #if CANARY_DEBUG_PRINT
     alt_printf("-------------Adding canary--------------\n");
     alt_printf("| Pointer:      0x%x\n", canary.heap_canary_pointer);
@@ -151,7 +151,6 @@ void remove_canary(__uint64_t* heap_start){
     #if CANARY_DEBUG_PRINT
     alt_printf("Removing Canary at 0x%x\n", heap_start);
     #endif
-    
     CanaryObject* rev_obj;
     int i = 0;
     

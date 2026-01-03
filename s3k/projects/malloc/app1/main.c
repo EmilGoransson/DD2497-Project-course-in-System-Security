@@ -103,7 +103,7 @@ bool test_malloc(){
 	int sizes[] = {100, 100, 1, 99, 69, 1, 69, 1, 69, 1, 69, 0};
 	void* malloc_blocks[sizeof(sizes)/sizeof(sizes[0]) -1];
 	for(int i=0, size=sizes[0]; size != 0; i++, size=sizes[i]){
-		print_malloc_debug_info("--- Malloc heap blocks ---");
+		//print_malloc_debug_info_list("--- Malloc heap blocks ---");
 		void* ptr = s3k_simple_malloc_random(size);
 		malloc_blocks[i] = ptr;
 		if(ptr==(void*)0){
@@ -126,16 +126,18 @@ int main(void)
 	
 	//char* dynamic_ints_a = s3k_simple_malloc_random(100);
 	int i;
-	for(i=0; i<100 && !test_malloc(); i++){
+	for(i=0; i<10000 && !test_malloc(); i++){
 		alt_printf("TEST NUMBER %d\n", i);
 	}
+
+	print_malloc_debug_info_list("--- Malloc heap blocks after all tests ---");
 
 	alt_printf("-------------------------------------\n");
 	alt_printf("| Ran First Set of Malloc Tests\n");
     alt_printf("| Compleated %d tests\n", i);
 	alt_printf("| Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
 	alt_printf("-------------------------------------\n");
-	while(1){}
+#if 0
 	if(test1())
 	{
 		alt_printf("Passed test1: Simultanious use of malloc and free\n");
@@ -165,4 +167,5 @@ int main(void)
 
 
 	print_malloc_debug_info("--- After Malloc Heap Blocks ---");
+#endif
 }

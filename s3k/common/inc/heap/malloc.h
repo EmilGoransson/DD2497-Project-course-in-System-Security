@@ -23,6 +23,7 @@ typedef struct MallocMatadata{
 } MallocMatadata;
 
 void print_malloc_debug_info(char* title);
+void print_malloc_debug_info_list(char* title);
 
 void s3k_init_malloc();
 

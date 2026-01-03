@@ -23,7 +23,8 @@ void print_malloc_debug_info_list(char* title){
     alt_printf("%s\n", title);
     HeapObject* curr = &s3k_heap->objects[0];
     while(curr){
-        alt_printf("Object pos: 0x%x --> 0x%x, NP: 0x%x\n", curr->start_pos, curr->end_pos, curr->next);
+        int block_size = get_heap_object_size(*curr);
+        alt_printf("Object pos: 0x%x --> 0x%x, size: %d\n", curr->start_pos, curr->end_pos, block_size);
         curr = curr->next;
     }
 }
@@ -121,7 +122,7 @@ HeapObject* s3k_try_combine(HeapObject* start_object, uint64_t target_size){
 void s3k_try_trim_extend(HeapObject* object, uint64_t target_size){
     uint64_t object_size = get_heap_object_size(*object);
     HeapObject* next_object = object->next;
-    if (object_size <= target_size || !(next_object))
+    if (object_size <= target_size)
         return;
     if (object_size / 2 > target_size){
         #if MALLOC_DEEP_DEBUG_PRINT
@@ -132,21 +133,21 @@ void s3k_try_trim_extend(HeapObject* object, uint64_t target_size){
         // Add remaining space to a new block
         // if the next block is used
         HeapObject* free = find_empty_metadata_slot();
-        if(object->next->is_used && free){
+        if((!next_object || next_object->is_used) && free){
             HeapObject new = {
-                .next = object->next,
+                .next = next_object,
                 .prev = object,
                 .is_used = 0,
                 .start_pos = object->start_pos+target_size,
                 .end_pos = object->end_pos,
             };
             *free = new;
-            if(object->next)
-                object->next->prev = free;
+            if(next_object)
+                next_object->prev = free;
             object->next = free;
             object->end_pos = new.start_pos;
         }
-        else{
+        else if(object->next){
             object->end_pos = object->start_pos + target_size;
             next_object->start_pos = object->end_pos;
         }
@@ -188,6 +189,7 @@ void* s3k_simple_malloc(uint64_t size){
         alt_printf("| next: 0x%x\n", block_to_give->next);
         alt_printf("----------------------------\n");
 #endif
+
         add_canary((uint64_t*) (block_to_give->end_pos-CANARY_SIZE));
         return (void*)block_to_give->start_pos;
     }
@@ -224,7 +226,10 @@ HeapObject* s3k_simple_find_empty_slot(HeapObject* next, uint64_t size, bool for
             // Otherwise, try to combine with next block
             else{
                 find_avalible_block = s3k_try_combine(next, size);
-                if(find_avalible_block) break; //return (void*)combined->start_pos;
+                if(find_avalible_block){
+                    s3k_try_trim_extend(find_avalible_block, size);
+                    break;
+                }
             }
         }
         if (forward) 
