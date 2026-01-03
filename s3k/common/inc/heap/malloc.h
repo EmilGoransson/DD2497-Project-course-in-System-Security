@@ -23,6 +23,7 @@ typedef struct MallocMatadata{
 } MallocMatadata;
 
 void print_malloc_debug_info(char* title);
+void print_malloc_debug_info_list(char* title);
 
 void s3k_init_malloc();
 
@@ -31,6 +32,8 @@ void* s3k_simple_malloc(uint64_t size);
 bool check_memory_is_zeroed(uint64_t size, uint64_t memory_address);
 
 void* s3k_simple_malloc_random(uint64_t size);
+
+HeapObject* find_empty_metadata_slot();
 
 HeapObject* s3k_simple_find_empty_slot(HeapObject* next, uint64_t size, bool forward);
 

@@ -101,11 +101,12 @@ bool test4(){
 	
 
 bool test_malloc(){
-	int sizes[] = {100, 100, 2, 2, 7, 100, 7, 69, 42, 96, 69, 1, 99, 2, 0};
+	int sizes[] = {100, 100, 1, 99, 69, 1, 69, 1, 69, 1, 69, 0};
 	void* malloc_blocks[sizeof(sizes)/sizeof(sizes[0]) -1];
 	for(int i=0, size=sizes[0]; size != 0; i++, size=sizes[i]){
-		//print_malloc_debug_info("--- Malloc heap blocks ---");
-		void* ptr = s3k_simple_malloc(size);
+		//print_malloc_debug_info_list("--- Malloc heap blocks ---");
+		void* ptr = s3k_simple_malloc_random(size);
+		
 		malloc_blocks[i] = ptr;
 		if(ptr==(void*)0){
 			alt_printf("MALLOC ERROR, GOT NULLPTR!\n");
@@ -123,20 +124,20 @@ int main(void)
 	s3k_init_malloc();
 	init_canary_table();
 	init_canary_trap();
-	// Zero terminated int array.
-	
-	//char* dynamic_ints_a = s3k_simple_malloc_random(100);
+#if 1
 	int i;
-	for(i=0; i<10 && !test_malloc(); i++){
+	for(i=0; i<100 && !test_malloc(); i++){
 		alt_printf("TEST NUMBER %d\n", i);
 	}
+
+	print_malloc_debug_info_list("--- Malloc heap blocks after all tests ---");
 
 	alt_printf("-------------------------------------\n");
 	alt_printf("| Ran First Set of Malloc Tests\n");
     alt_printf("| Compleated %d tests\n", i);
 	alt_printf("| Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
 	alt_printf("-------------------------------------\n");
-	while(1){}
+#else
 	if(test1())
 	{
 		alt_printf("Passed test1: Simultanious use of malloc and free\n");
@@ -164,6 +165,7 @@ int main(void)
 	//To view the CanaryTable info
 	//size((CanaryTable*)0x80023000);
 
-
-	print_malloc_debug_info("--- After Malloc Heap Blocks ---");
+	alt_printf("--- Ran All Tests ---\n\n");
+	print_malloc_debug_info("--- Malloc Heap Blocks After Tests ---");
+#endif
 }
