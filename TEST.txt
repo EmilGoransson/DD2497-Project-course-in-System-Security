@@ -6,3 +6,16 @@ Examples:
 - s3k/projects/deploying-malloc-example: 
     A quick example of using our malloc as replacement for the real malloc 
 
+
+-s3k/project/malloc_exploit
+    --Purpose of this test is to show how the trap handler prevents a buffer overflow from modifying a region of memory
+        that shouldn't be accessable. Preventing modifications to the canary_table.
+    --Before running it ensure that you clean all build files inside the s3k folder and the s3k/project/malloc_exploit folder: 
+        "make clean"
+    --To run with or without the trap handler, ensure that the macro USE_TRAP is defined as 0 for without and as 1 for with it.
+        The macro is defined inside s3k/common/inc/heap/canary.h
+        "#define USE_TRAP 0" or "#define USE_TRAP 1"
+    --To run the program just initlize it inside the malloc_exploit folder:
+        "make qemu"
+
+
