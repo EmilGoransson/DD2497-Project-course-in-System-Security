@@ -160,7 +160,6 @@ void* s3k_simple_malloc(uint64_t size){
     HeapObject* next = &s3k_heap->objects[0];
     HeapObject* block_to_give = (HeapObject*)0;
     while(next){
-        
         if(!next->is_used){
             // If it is free and fits the object, use it
             if(get_heap_object_size(*next) >= size){
@@ -189,7 +188,6 @@ void* s3k_simple_malloc(uint64_t size){
         alt_printf("| next: 0x%x\n", block_to_give->next);
         alt_printf("----------------------------\n");
 #endif
-
         add_canary((uint64_t*) (block_to_give->end_pos-CANARY_SIZE));
         return (void*)block_to_give->start_pos;
     }
