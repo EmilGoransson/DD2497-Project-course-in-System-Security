@@ -1,0 +1,8 @@
+How to test "Safe-Heap: Malloc with Canaries"
+
+In the projects folder (/s3k/projects) are there 3 (?) example code of the implemented feature for a simple malloc
+
+Examples:
+- s3k/projects/deploying-malloc-example: 
+    A quick example of using our malloc as replacement for the real malloc 
+
