@@ -1,15 +1,17 @@
 How to test "Safe-Heap: Malloc with Canaries"
 
-In the projects folder (/s3k/projects), there are 3 (?) example codes of the implemented features for a our malloc with Canaries
+In the projects folder (/s3k/projects), there are 3 example codes of the implemented features for a our malloc with Canaries
 
 Examples:
-- s3k/projects/deploying-malloc-example: 
+-s3k/projects/malloc:
+    --
+
+-s3k/projects/deploying-malloc-example: 
     --A quick example of using our malloc as replacement for the real malloc
     --To run the program change directory to s3k/projects/deploying-malloc-example folder and run "make clean && make qemu"
 
-
 -s3k/project/malloc_exploit
-    --Purpose of this test is to show how the trap handler prevents a buffer overflow from modifying a region of memory
+    --Purpose of this test is to show how the trap handler prevents modifying a region of memory
         that shouldn't be accessable. Preventing modifications to the canary_table.
     --Before running it ensure that you clean all build files inside the s3k folder and the s3k/project/malloc_exploit folder: 
         "make clean"

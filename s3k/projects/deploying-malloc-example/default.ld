@@ -24,7 +24,6 @@ SECTIONS {
 	*/
 	.canary_metadata : ALIGN(4096) {
 		__canary_metadata_pointer = .;
-		. += __canaryTable_size;
 	}
 
 	.data : {

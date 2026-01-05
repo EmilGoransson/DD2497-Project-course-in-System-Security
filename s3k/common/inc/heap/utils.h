@@ -19,10 +19,6 @@
 #define APP1_BASE_ADDR 0x80020000
 #define APP1_LENGHT 0x10000
 
-#define APP2_PID 2
-#define APP2_BASE_ADDR 0x80030000
-#define APP2_LENGHT 0x10000
-
 // See plat_conf.h
 #define BOOT_PMP 0
 #define RAM_MEM 1

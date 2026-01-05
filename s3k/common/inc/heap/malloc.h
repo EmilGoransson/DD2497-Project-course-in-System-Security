@@ -2,7 +2,6 @@
 #include "s3k/s3k.h"
 
 
-
 extern int __heap_pointer;
 extern int __heap_size;
 extern int __heap_metadata_pointer;
@@ -26,8 +25,6 @@ void print_malloc_debug_info(char* title);
 void print_malloc_debug_info_list(char* title);
 
 void s3k_init_malloc();
-
-void* s3k_simple_malloc(uint64_t size);
 
 bool check_memory_is_zeroed(uint64_t size, uint64_t memory_address);
 
