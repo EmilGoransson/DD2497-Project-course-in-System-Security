@@ -13,12 +13,15 @@ extern int __canaryTable_size;
 extern uint8_t __critical_func_start;
 extern uint8_t __critical_func_end;
 
+//Defined in trap.S
+extern void canary_trap(void);
+
 /* CANARY TRAP CODE */
 #define RAM_CAP 2               // Update to RAM_MEM (which is defined in utils.h)
 static char trap_stack[TRAP_STACK_SIZE];
 static uint32_t pmp_cap_idx;
 
-void canary_trap_handler() __attribute__((interrupt("machine")));
+void canary_trap_handler();
 
 /* 
     Initializes the trap
@@ -40,10 +43,9 @@ void init_canary_trap(){
 	// debug_capability_from_idx(pmp_cap_idx);
     // THIS FUNCTINO ACTIUALLY DOES TAKE ARUGMENTS, BUT WE ARE NOT ALLOWED TO 
     // DEFINE IT AS SUCH!!!
-    setup_trap(canary_trap_handler, trap_stack, TRAP_STACK_SIZE);
+    alt_printf("MEMORY LOCATION OF CANARY_TRAP: 0x%x\n", canary_trap);
+    setup_trap(canary_trap, trap_stack, TRAP_STACK_SIZE);
 
-    alt_printf("CRITICAL SECTION START: 0x%x", &__critical_func_start);
-    alt_printf("CRITICAL SECTION END: 0x%x", &__critical_func_end);
 }
 
 // https://www2.eecs.berkeley.edu/Pubs/TechRpts/2016/EECS-2016-118.pdf 
@@ -137,46 +139,17 @@ SD_Instruction parse_sd_instruction(uint32_t data){
 
 void canary_trap_handler(){
     /*
-        We don't have any clear way to access all the 
-        general purpose registers as they were before the exception.
-        Luckely most of them are not changed at this point. 
-        We use inline assembly since it is easier, but this should
-        really be done fully in assembly.
+        The registers are saved in order on the stack
+        in the assembly function canary_trap. We obtain a 
+        pointer to it like this: Take initial SP (end of trap stack)
+        and subtrack 512 bytes from it (space reserverd for registers).
     */
-
-    __asm__ volatile (
-        "addi sp, sp, -192\n"
-        "sd x8,    0(sp)\n"
-        "sd x9,    8(sp)\n"
-        "sd x10,  16(sp)\n"
-        "sd x11,  24(sp)\n"
-        "sd x12,  32(sp)\n"
-        "sd x13,  40(sp)\n"
-        "sd x14,  48(sp)\n"
-        "sd x15,  56(sp)\n"
-        "sd x16,  64(sp)\n"
-        "sd x17,  72(sp)\n"
-        "sd x18,  80(sp)\n"
-        "sd x19,  88(sp)\n"
-        "sd x20,  96(sp)\n"
-        "sd x21, 104(sp)\n"
-        "sd x22, 112(sp)\n"
-        "sd x23, 120(sp)\n"
-        "sd x24, 128(sp)\n"
-        "sd x25, 136(sp)\n"
-        "sd x26, 144(sp)\n"
-        "sd x27, 152(sp)\n"
-        "sd x28, 160(sp)\n"
-        "sd x29, 168(sp)\n"
-        "sd x30, 176(sp)\n"
-        "sd x31, 184(sp)\n"
-        ::: "memory"
-    );
-    volatile uint64_t* reg_ptr = (uint64_t*)s3k_reg_read(S3K_REG_SP);
+    volatile uint64_t* reg_ptr = (uint64_t*)trap_stack + (TRAP_STACK_SIZE-512)/sizeof(uint64_t);
+    
     volatile uint64_t registers[32];
-    for(int i=8; i<32; i++)
+    for(int i=0; i<32; i++)
     {
-        registers[i] = reg_ptr[i-8];
+        registers[i] = reg_ptr[i+1];
     }
 
     alt_printf("---- TRAP HANDLER INVOKED ----\n");
@@ -205,9 +178,9 @@ void canary_trap_handler(){
         }
 
         open_canary_metadata();
-        /*for(int i=8; i<16; i++){
+        for(int i=8; i<24; i++){
             alt_printf("REG: x%d has value: 0x%x\n", i, registers[i]);
-        }*/
+        }
         // Run the assembly C.SD assembly instrcution
         uint64_t src_reg_value = registers[instr.source_reg];
         uint64_t dst_reg_value = registers[instr.dest_reg];
@@ -231,37 +204,6 @@ void canary_trap_handler(){
         while(1){}
     }
 
-    __asm__ volatile (
-        "ld x8,    0(sp)\n\t"
-        "ld x9,    8(sp)\n\t"
-        "ld x10,  16(sp)\n\t"
-        "ld x11,  24(sp)\n\t"
-        "ld x12,  32(sp)\n\t"
-        "ld x13,  40(sp)\n\t"
-        "ld x14,  48(sp)\n\t"
-        "ld x15,  56(sp)\n\t"
-        "ld x16,  64(sp)\n\t"
-        "ld x17,  72(sp)\n\t"
-        "ld x18,  80(sp)\n\t"
-        "ld x19,  88(sp)\n\t"
-        "ld x20,  96(sp)\n\t"
-        "ld x21, 104(sp)\n\t"
-        "ld x22, 112(sp)\n\t"
-        "ld x23, 120(sp)\n\t"
-        "ld x24, 128(sp)\n\t"
-        "ld x25, 136(sp)\n\t"
-        "ld x26, 144(sp)\n\t"
-        "ld x27, 152(sp)\n\t"
-        "ld x28, 160(sp)\n\t"
-        "ld x29, 168(sp)\n\t"
-        "ld x30, 176(sp)\n\t"
-        "ld x31, 184(sp)\n\t"
-        "addi sp, sp, 192\n\t"
-        ::: "x8",  "x9",  "x10", "x11", "x12", "x13", "x14", "x15",
-            "x16", "x17", "x18", "x19", "x20", "x21", "x22", "x23",
-            "x24", "x25", "x26", "x27", "x28", "x29", "x30", "x31",
-            "memory"
-    );
 }
 
 // Sets the metadata to read only

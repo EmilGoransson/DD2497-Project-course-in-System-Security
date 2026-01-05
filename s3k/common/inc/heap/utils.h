@@ -42,7 +42,7 @@
 					(((uint64_t) block) << S3K_MIN_BLOCK_SIZE) \
 					)
 
-#define TRAP_STACK_SIZE 1024
+#define TRAP_STACK_SIZE 2048
 #define INSTRUCTION_SIZE 4
 #define TRAP_EPC_CONSTANT 1
 
