@@ -44,6 +44,7 @@ else canary in use
 
 Used by add_canary
 */
+__attribute__((section(".text.critical_func"), used, noinline)) 
 void internal_add_canary(CanaryObject canary){
     int free_index = 0;
     while (canarytable->entries[free_index].heap_canary_pointer) {
@@ -73,36 +74,6 @@ void add_canary(uint64_t* heap_canary_location){
     internal_add_canary(new_canary);
 }
 
-void __attribute__((noinline)) crash(uint64_t value1, uint64_t value2){
-    /*
-        This block has to be ONE inline assembly block
-        to make sure the compiler does not reuse the 
-        s10 / s11 registers and execute out of order.
-
-        We store the arugments in s10 and s11,
-        these registers.
-    */
-    __asm__ volatile(
-        "mv a0, %0\n\t"
-        "mv a1, %1\n\t"
-        
-        // ILLIGAL WRITE OPERATION TO CRASH THE PROGRAM,
-        // This also HAS to be assembly to 
-        // 1. Make sure it does not overwrite the s10, s11 registers
-        // 2. It removes the instruction from executing, since it 
-        //      knows it will crash!
-
-        // *((int*)0) = 0x100
-        "li t0, 0x0\n\t"
-        "li t1, 0x100\n\t"
-        "sw t1, 0(t0)"
-        
-        :
-        : "r"(value1), "r"(value2) /* Inputs */
-        : "a0", "a1", "t0", "t1", "memory"
-    );
-}
-
 /*
 Randomizer for creating canary values
 
@@ -129,7 +100,9 @@ bool check_canary(CanaryTable* target_table){
     return same_canary;
 }
 
-void remove_canary(__uint64_t* heap_start){ // Change heap_start variable name to something more fitting
+__attribute__((section(".text.critical_func"), used, noinline)) 
+void remove_canary(__uint64_t* heap_start){ 
+    // Change heap_start variable name to something more fitting
     CanaryObject* rev_obj;
     __uint8_t i = 0;
     

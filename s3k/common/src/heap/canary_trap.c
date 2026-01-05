@@ -10,6 +10,9 @@
 extern int __canary_metadata_pointer;
 extern int __canaryTable_size;
 
+extern uint8_t __critical_func_start;
+extern uint8_t __critical_func_end;
+
 /* CANARY TRAP CODE */
 #define RAM_CAP 2               // Update to RAM_MEM (which is defined in utils.h)
 static char trap_stack[TRAP_STACK_SIZE];
@@ -38,6 +41,9 @@ void init_canary_trap(){
     // THIS FUNCTINO ACTIUALLY DOES TAKE ARUGMENTS, BUT WE ARE NOT ALLOWED TO 
     // DEFINE IT AS SUCH!!!
     setup_trap(canary_trap_handler, trap_stack, TRAP_STACK_SIZE);
+
+    alt_printf("CRITICAL SECTION START: 0x%x", &__critical_func_start);
+    alt_printf("CRITICAL SECTION END: 0x%x", &__critical_func_end);
 }
 
 // https://www2.eecs.berkeley.edu/Pubs/TechRpts/2016/EECS-2016-118.pdf 
@@ -189,6 +195,15 @@ void canary_trap_handler(){
 
     uint64_t return_address;
     if(instr.valid){
+        /* 
+            Check if the caller is allowed to open meta-data
+        */
+        if(exception_address < &__critical_func_start 
+            || exception_address > &__critical_func_end){
+            alt_printf("Illigal Canary Write Attempted From 0x%x\n", exception_address);
+            while(1){}
+        }
+
         open_canary_metadata();
         /*for(int i=8; i<16; i++){
             alt_printf("REG: x%d has value: 0x%x\n", i, registers[i]);
