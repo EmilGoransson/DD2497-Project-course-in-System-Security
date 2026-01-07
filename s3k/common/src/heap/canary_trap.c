@@ -163,15 +163,17 @@ void canary_trap_handler(){
         }
 
         open_canary_metadata();
-        for(int i=8; i<24; i++){
+        /*for(int i=8; i<24; i++){
             alt_printf("REG: x%d has value: 0x%x\n", i, registers[i]);
-        }
+        }*/
         // Run the assembly C.SD assembly instrcution
-        uint64_t src_reg_value = registers[instr.source_reg];
-        uint64_t dst_reg_value = registers[instr.dest_reg];
-        uint64_t* target_position = (uint64_t*)(instr.offset + dst_reg_value);
+        volatile uint64_t src_reg_value = registers[instr.source_reg];
+        volatile uint64_t dst_reg_value = registers[instr.dest_reg];
+        volatile uint64_t* target_position = (volatile uint64_t*)(instr.offset + dst_reg_value);
         alt_printf("| WRITING VALUE 0x%x to position 0x%x\n", src_reg_value, target_position);
         *target_position = src_reg_value;
+        alt_printf("| VALUE AFTER WRITE 0x%x AT POS 0x%x\n", *target_position, target_position);
+
         lock_canary_metadata();
 
         // Return the EPC to the instruction after the exception

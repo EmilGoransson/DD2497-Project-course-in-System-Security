@@ -284,8 +284,14 @@ void s3k_simple_free(void* ptr){
         if(s3k_heap->objects[i].is_used && (void*)s3k_heap->objects[i].start_pos == ptr){
             int size = (s3k_heap->objects[i].end_pos) - s3k_heap->objects[i].start_pos;
             s3k_heap->objects[i].is_used = false;
-            remove_canary((uint64_t*)(s3k_heap->objects[i].end_pos-CANARY_SIZE));
-            memset(ptr, 0, size);
+            int err = remove_canary((uint64_t*)(s3k_heap->objects[i].end_pos-CANARY_SIZE));
+            if(!err){
+                alt_printf("Writing zeros to heap\n");
+                memset(ptr, 0, size);   
+            }
+            else{
+                //TODO?
+            }
             return;
         }
     }
