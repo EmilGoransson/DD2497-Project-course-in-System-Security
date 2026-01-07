@@ -5,7 +5,7 @@
 // Define debug print levels
 #define MALLOC_DEBUG_PRINT 0
 #define MALLOC_DEEP_DEBUG_PRINT 0
-#define CANARY_DEBUG_PRINT 1
+#define CANARY_DEBUG_PRINT 0
 
 
 #define UART0_BASE_ADDR (0x10000000ull)

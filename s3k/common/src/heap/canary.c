@@ -88,27 +88,44 @@ Check all canaries in the given canary table are correct.
 */
 bool check_canary(CanaryTable* target_table){
     for (int i = 0; i < CANARY_TABLE_ENTRIES; i++){
-        volatile uint64_t* heap_canary_pointer = target_table->entries[i].heap_canary_pointer;
+        uint64_t* volatile heap_canary_pointer = target_table->entries[i].heap_canary_pointer;
         if(heap_canary_pointer != 0){
             volatile uint64_t current_val = *(heap_canary_pointer);
             volatile uint64_t expected_val = target_table->entries[i].canary;
             if(expected_val != current_val){
-                volatile uint64_t* heap_canary_pointer2 = target_table->entries[i].heap_canary_pointer;
-                alt_printf("ORIGINAL: 0x%x, NEW 0x%x\n", heap_canary_pointer, heap_canary_pointer2);
+                /*  If there was a context switch at the wrong time, it might have read different parts of
+                    the memory at different times which can lead to false positives. We find such race
+                    conditions by reading the data again and comparing the values.
+                
+                    This could be solved in a better way if we could find a way to detect
+                    when context switches occur (and restart check_canary at that point).
+                */
+                uint64_t* volatile heap_canary_pointer2 = target_table->entries[i].heap_canary_pointer;
                 if(heap_canary_pointer!=heap_canary_pointer2){
-                    alt_printf("RACE CONDITION FOUND!\n");
+                    alt_printf("RACE CONDITION FOUND, Continuing.\n");
                 }
+                else{
+                    /*alt_printf("WAITING FOR VALUE TO RETURN TO ORIGINAL!\n");
+                    for(int i=0; i<100000; i++){
+                        volatile uint64_t* new_val = target_table->entries[i].heap_canary_pointer;
+                        if(new_val != heap_canary_pointer){
+                            alt_printf("IT FINALLY GOT A NEW VALUEE!, i=%d\n", i);
+                            alt_printf("NEW VALUE: 0x%x\n", new_val);
+                            break;
+                        }
+                    }*/
 
-                #if CANARY_DEBUG_PRINT
-                alt_printf("-------------CANARY ERROR--------------\n");
-                alt_printf("| Pointer:  0x%x\n", heap_canary_pointer);
-                alt_printf("| Expected: 0x%x\n", expected_val);
-                alt_printf("| Actual:   0x%x\n", current_val);
-                alt_printf("| MATA POS: 0x%x\n", &target_table->entries[i].heap_canary_pointer);
-                alt_printf("--------------------------------------\n");
-                #endif
+                    #if CANARY_DEBUG_PRINT
+                    alt_printf("-------------CANARY ERROR--------------\n");
+                    alt_printf("| Pointer:  0x%x\n", heap_canary_pointer);
+                    alt_printf("| Expected: 0x%x\n", expected_val);
+                    alt_printf("| Actual:   0x%x\n", current_val);
+                    alt_printf("| MATA POS: 0x%x\n", &target_table->entries[i].heap_canary_pointer);
+                    alt_printf("--------------------------------------\n");
+                    #endif
 
-                return false;
+                    return false;
+                }
             }
         }
     }

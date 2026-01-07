@@ -125,8 +125,6 @@ void canary_trap_handler(){
     {
         registers[i] = reg_ptr[i+1];
     }
-
-    alt_printf("---- TRAP HANDLER INVOKED ----\n");
     
     volatile uint64_t* exception_address = (uint64_t*)s3k_reg_read(S3K_REG_EPC);
     
@@ -146,7 +144,6 @@ void canary_trap_handler(){
     }
 
     uint32_t exception_instruction = (uint32_t)*exception_address;
-    alt_printf("| Exception Address: 0x%x ---\n", exception_address);
     SD_Instruction instr = parse_sd_instruction(exception_instruction);
     
     
@@ -170,19 +167,14 @@ void canary_trap_handler(){
         volatile uint64_t src_reg_value = registers[instr.source_reg];
         volatile uint64_t dst_reg_value = registers[instr.dest_reg];
         volatile uint64_t* target_position = (volatile uint64_t*)(instr.offset + dst_reg_value);
-        alt_printf("| WRITING VALUE 0x%x to position 0x%x\n", src_reg_value, target_position);
         *target_position = src_reg_value;
-        alt_printf("| VALUE AFTER WRITE 0x%x AT POS 0x%x\n", *target_position, target_position);
 
         lock_canary_metadata();
 
         // Return the EPC to the instruction after the exception
         // Assume that we only use compressed instructions (2 bytes)
         return_address = (uint64_t)exception_address + (instr.compressed ? 2 : 4);
-        alt_printf("| RETURNING TO:     0x%x\n", return_address);
-        alt_printf("| Next Instruction: 0x%x\n", *((uint16_t*)return_address));
         s3k_reg_write(S3K_REG_EPC, return_address);
-        alt_printf("| ---- RETURNING FROM TRAP HANDLER -----\n");
     }
     else{
         // Debug print crashed instruction
@@ -208,7 +200,6 @@ void lock_canary_metadata(){
 // Sets the metadata to read-write
 void open_canary_metadata(){
     s3k_err_t err = s3k_pmp_unload(pmp_cap_idx);
-    alt_printf("OPEN CANARY ERRNO: %d\n", err);
     if(err){
         alt_printf("ERROR: Could not unlock canary metadata pmp region\n");
     }
