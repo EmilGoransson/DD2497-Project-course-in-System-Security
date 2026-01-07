@@ -16,7 +16,8 @@ int main(void)
 	uint64_t* canary_meta = (uint64_t*)(80023000);
 	// Try an illigal write here
 	//*canary_meta = 69;
-
+	//TRY CALL TRAP MANUALLY!
+	//canary_trap_handler();
 	alt_printf("VALUE!!!!\n");
     alt_printf("OUTSIDE. SP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_SP));
     alt_printf("OUTSIDE. TSP adress in trap handler: 0x%x\n", s3k_reg_read(S3K_REG_TSP));

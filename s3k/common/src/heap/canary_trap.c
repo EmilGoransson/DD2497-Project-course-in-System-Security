@@ -82,16 +82,6 @@ SD_Instruction parse_sd_instruction(uint32_t data){
 
     if(is_compressed){
         C_SD_Intr* csd_intr = (C_SD_Intr*)&data;
-
-        alt_printf("\t------ Parsing Compressed Instruction: 0x%x -------\n", (uint16_t)data);
-        alt_printf("\t| OP:     0x%x\n", csd_intr->op);
-        alt_printf("\t| rs2:    0x%x\n", csd_intr->rs2);
-        alt_printf("\t| imm1:   0x%x\n", csd_intr->imm1);
-        alt_printf("\t| rs1:    0x%x\n", csd_intr->rs1);
-        alt_printf("\t| imm2:   0x%x\n", csd_intr->imm2);
-        alt_printf("\t| funct3: 0x%x\n", csd_intr->funct3);
-        alt_printf("\t--------------------------------------------\n");
-
         
         SD_Instruction intr_compressd = {
             .valid      = csd_intr->op==0?1:0, // C.SD has OP code 0
@@ -105,15 +95,6 @@ SD_Instruction parse_sd_instruction(uint32_t data){
     else{
         S_Instr* s_instr = (S_Instr*)&data;
 
-        alt_printf("\t------ Parsing S-Instruction: 0x%x -------\n", data);
-        alt_printf("\t| OP:     0x%x\n", s_instr->op);
-        alt_printf("\t| imm1:   0x%x\n", s_instr->imm1);
-        alt_printf("\t| funct3: 0x%x\n", s_instr->funct3);
-        alt_printf("\t| rs1:    0x%x\n", s_instr->rs1);
-        alt_printf("\t| rs2:    0x%x\n", s_instr->rs2);
-        alt_printf("\t| imm2:   0x%x\n", s_instr->imm2);
-        alt_printf("\t--------------------------------------------\n");
-
         SD_Instruction intr_stype = {
             .valid      = 1, // C.SD has OP code 51?
             .offset     = s_instr->imm1 | s_instr->imm2 << 5,
@@ -123,13 +104,6 @@ SD_Instruction parse_sd_instruction(uint32_t data){
         };
         intr = intr_stype;
     }
-
-    alt_printf("\t------ Parsed Instruction -------\n");
-    alt_printf("\t| valid:  0x%x\n", intr.valid);
-    alt_printf("\t| Source: x%d\n", intr.source_reg);
-    alt_printf("\t| Dest:   x%d\n", intr.dest_reg);
-    alt_printf("\t| Offset: 0x%x\n", intr.offset);
-    alt_printf("\t-----------------------------------\n");
 
     return intr;
 
@@ -153,18 +127,29 @@ void canary_trap_handler(){
     }
 
     alt_printf("---- TRAP HANDLER INVOKED ----\n");
-    volatile uint64_t* sp = (uint64_t*)s3k_reg_read(S3K_REG_ESP);
-    int64_t offset = 0;
-    alt_printf("| PROC PID: %d\n", 0);
+    
+    volatile uint64_t* exception_address = (uint64_t*)s3k_reg_read(S3K_REG_EPC);
+    
+    // Set to predefined value to verify execution path
+    s3k_reg_write(S3K_REG_EPC, TRAP_EPC_CONSTANT);
+    volatile uint64_t* sp = (uint64_t*)s3k_reg_read(S3K_REG_SP);
+    volatile uint64_t* esp = (uint64_t*)s3k_reg_read(S3K_REG_ESP);
 
-    // Set reg to 1 such that we can verify that we are in the trap handler
-    uint64_t* exception_address = (uint64_t*)s3k_reg_read(S3K_REG_EPC);
+    // Verify that trap was invoked correctly (not directly called)
+    if(esp == 0 || exception_address==0 || sp < trap_stack || sp > trap_stack + TRAP_STACK_SIZE){
+        alt_printf("Error: Trap handler invoked incorrectly, terminating\n");
+        alt_printf("| Exception address: 0x%x\n", exception_address);
+        alt_printf("| SP               : 0x%x\n", sp);
+        alt_printf("| ESP              : 0x%x\n", esp);
+        alt_printf("| Trap stack       : 0x%x\n", trap_stack);
+        while(1){}
+    }
 
     uint32_t exception_instruction = (uint32_t)*exception_address;
     alt_printf("| Exception Address: 0x%x ---\n", exception_address);
     SD_Instruction instr = parse_sd_instruction(exception_instruction);
     
-    s3k_reg_write(S3K_REG_EPC, TRAP_EPC_CONSTANT);
+    
 
     uint64_t return_address;
     if(instr.valid){

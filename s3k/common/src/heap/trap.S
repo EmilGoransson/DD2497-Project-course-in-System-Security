@@ -15,9 +15,9 @@
 
 canary_trap:
     # Reserver the first 256 unused bytes and 32 registers
-    # x0-x4 does not have to be saved, but to make thing simpler,
+    # we skip saving some registers that are not needed, but
     # we allocate space for all 32 registers. Also SP has to be 
-    # 16 byte alligned, (at least in X86).
+    # 16 byte alligned, (at least that is the case in X86).
     addi sp, sp, -512
     sd ra,  0(sp)
     sd x5,  48(sp)
