@@ -2,6 +2,12 @@
 #include "altc/altio.h"
 #include "s3k/s3k.h"
 
+// Define debug print levels
+#define MALLOC_DEBUG_PRINT 0
+#define MALLOC_DEEP_DEBUG_PRINT 0
+#define CANARY_DEBUG_PRINT 1
+
+
 #define UART0_BASE_ADDR (0x10000000ull)
 
 // Application process IDs and their memory layout
@@ -12,10 +18,6 @@
 #define APP1_PID 1
 #define APP1_BASE_ADDR 0x80020000
 #define APP1_LENGHT 0x10000
-
-#define APP2_PID 2
-#define APP2_BASE_ADDR 0x80030000
-#define APP2_LENGHT 0x10000
 
 // See plat_conf.h
 #define BOOT_PMP 0
@@ -45,6 +47,9 @@
 #define TRAP_STACK_SIZE 2048
 #define INSTRUCTION_SIZE 4
 #define TRAP_EPC_CONSTANT 1
+//Whether to Run APP1 and APP0 on the same core 
+#define RUN_SAME_CORE 1
+
 
 void setup_uart_app0();
 

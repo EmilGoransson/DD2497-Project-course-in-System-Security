@@ -1,5 +1,10 @@
 #include "heap/utils.h"
 
+/*
+	Functions have been taken from the project folders init file.
+	However, some are slightly slightly modified.
+*/
+
 
 void setup_uart_app0()
 {
@@ -52,6 +57,7 @@ void s3k_print_cap(s3k_cap_t *cap) {
 	case S3K_CAPTY_PMP:
 		uint64_t pmp_start_pos;
 		uint64_t pmp_size;
+		//Fixed this print of PMP
 		s3k_napot_decode((*cap).pmp.addr, &pmp_start_pos, &pmp_size);
 		alt_printf("PMP rwx:%X used:%X index:%X address: 0x%X size: 0x%X\n",
 				   (*cap).pmp.rwx, (*cap).pmp.used, (*cap).pmp.slot, pmp_start_pos, pmp_size);
