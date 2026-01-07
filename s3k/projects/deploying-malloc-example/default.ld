@@ -7,7 +7,18 @@ __global_pointer$ = MIN(_sdata + 0x800, MAX(_data + 0x800, _end - 0x800));
 SECTIONS {
 	.text : {
 		*( .init )
+		
+		/* 
+			Add sub-section for the functions
+		 	that are allowed to write to the
+			canary metadata
+		 */
+		__critical_func_start = .;
+        *(.text.critical_func)
+        __critical_func_end = .;
+		
 		*( .text .text.* )
+		
 		/* Allign end to 8192 (assume total length 8192) */
 		. = ALIGN(8192);
 	} > RAM

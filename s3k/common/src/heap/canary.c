@@ -1,7 +1,6 @@
 #include <string.h>
 #include <stdatomic.h>
 #include "heap/canary.h"
-#include "heap/canary_trap.h"
 #include "heap/randomize.h"
 #include "heap/utils.h"
 
@@ -9,7 +8,7 @@
 extern int __canary_metadata_pointer;
 
 __attribute__((section(".canary_metadata"), used))
-CanaryTable canarytable;
+volatile CanaryTable canarytable;
 
 static int active_canaries = 0;
 
@@ -38,6 +37,8 @@ Add canary to Canary metadata
 
 Used by add_canary
 */
+
+__attribute__((section(".text.critical_func"), used, noinline)) 
 int internal_add_canary(CanaryObject canary){
     int free_index = next_random_int_v2(CANARY_TABLE_ENTRIES);
     for (int i = 0; i < CANARY_TABLE_ENTRIES; i++){
@@ -56,25 +57,13 @@ int internal_add_canary(CanaryObject canary){
     alt_printf("-------------Adding canary--------------\n");
     alt_printf("| Pointer:      0x%x\n", canary.heap_canary_pointer);
     alt_printf("| Value:        0x%x\n", canary.canary);
-    alt_printf("| Metadata pos: 0x%x\n", &canarytable->entries[free_index]);
     alt_printf("| --- Previous Data At Pos ---\n");
-    alt_printf("| Pointer:      0x%x\n", canarytable->entries[free_index].heap_canary_pointer);
-    alt_printf("| Value:        0x%x\n", canarytable->entries[free_index].canary);
     alt_printf("| Added index%d to the table, active canaries=%d\n", free_index, active_canaries);
     alt_printf("--------------------------------------\n");
 #endif
 
-    // Temporarely unlock the metadata section
-    // Put canary value at the given adress
     *canary.heap_canary_pointer = canary.canary;
-    #if USE_TRAP
-        open_canary_metadata();
-    #endif
-        //Add canary object to the heap
-        canarytable.entries[free_index] = canary;
-    #if USE_TRAP
-        lock_canary_metadata();
-    #endif
+    canarytable.entries[free_index] = canary;
     active_canaries++;
     return 0;
 }
@@ -98,20 +87,45 @@ int add_canary(uint64_t* canary){
 Check all canaries in the given canary table are correct.
 */
 bool check_canary(CanaryTable* target_table){
-    for (size_t i = 0; i < CANARY_TABLE_ENTRIES; i++){
-        volatile uint64_t* heap_canary_pointer = target_table->entries[i].heap_canary_pointer;
+    for (int i = 0; i < CANARY_TABLE_ENTRIES; i++){
+        uint64_t* volatile heap_canary_pointer = target_table->entries[i].heap_canary_pointer;
         if(heap_canary_pointer != 0){
-            uint64_t current_val = *(heap_canary_pointer);
-            uint64_t expected_val = target_table->entries[i].canary;
+            volatile uint64_t current_val = *(heap_canary_pointer);
+            volatile uint64_t expected_val = target_table->entries[i].canary;
             if(expected_val != current_val){
-#if CANARY_DEBUG_PRINT
-                alt_printf("-------------CANARY ERROR--------------\n");
-                alt_printf("| Pointer:  0x%x\n", heap_canary_pointer);
-                alt_printf("| Expected: 0x%x\n", expected_val);
-                alt_printf("| Actual:   0x%x\n", current_val);
-                alt_printf("--------------------------------------\n");
-#endif
-                return false;
+                /*  If there was a context switch at the wrong time, it might have read different parts of
+                    the memory at different times which can lead to false positives. We find such race
+                    conditions by reading the data again and comparing the values.
+                
+                    This could be solved in a better way if we could find a way to detect
+                    when context switches occur (and restart check_canary at that point).
+                */
+                uint64_t* volatile heap_canary_pointer2 = target_table->entries[i].heap_canary_pointer;
+                if(heap_canary_pointer!=heap_canary_pointer2){
+                    alt_printf("RACE CONDITION FOUND, Continuing.\n");
+                }
+                else{
+                    /*alt_printf("WAITING FOR VALUE TO RETURN TO ORIGINAL!\n");
+                    for(int i=0; i<100000; i++){
+                        volatile uint64_t* new_val = target_table->entries[i].heap_canary_pointer;
+                        if(new_val != heap_canary_pointer){
+                            alt_printf("IT FINALLY GOT A NEW VALUEE!, i=%d\n", i);
+                            alt_printf("NEW VALUE: 0x%x\n", new_val);
+                            break;
+                        }
+                    }*/
+
+                    #if CANARY_DEBUG_PRINT
+                    alt_printf("-------------CANARY ERROR--------------\n");
+                    alt_printf("| Pointer:  0x%x\n", heap_canary_pointer);
+                    alt_printf("| Expected: 0x%x\n", expected_val);
+                    alt_printf("| Actual:   0x%x\n", current_val);
+                    alt_printf("| MATA POS: 0x%x\n", &target_table->entries[i].heap_canary_pointer);
+                    alt_printf("--------------------------------------\n");
+                    #endif
+
+                    return false;
+                }
             }
         }
     }
@@ -121,11 +135,12 @@ bool check_canary(CanaryTable* target_table){
 /*
 Remove canary from canarytable
 */
+__attribute__((section(".text.critical_func"), used, noinline)) 
 int remove_canary(uint64_t* canary_adress){
     #if CANARY_DEBUG_PRINT
-    alt_printf("Removing Canary at 0x%x\n", heap_start);
+    alt_printf("Removing Canary at 0x%x\n", canary_adress);
     #endif
-    CanaryObject* rev_obj;
+
     int i = 0;
     
     //Find CanaryObject in canarytable
@@ -139,11 +154,9 @@ int remove_canary(uint64_t* canary_adress){
         }
     }
 
-    //Clear information about the object (Done by reference)
-    open_canary_metadata();
     canarytable.entries[i].heap_canary_pointer = (uint64_t*) 0;
     active_canaries--;
-    lock_canary_metadata();
+
     #if CANARY_DEBUG_PRINT
     alt_printf("Removed index %d from the table, active canaries=%d\n", i, active_canaries);
     #endif

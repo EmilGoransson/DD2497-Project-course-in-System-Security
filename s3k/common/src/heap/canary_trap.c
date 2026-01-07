@@ -1,26 +1,34 @@
 #include <string.h>
 #include "altc/altio.h"
 #include "s3k/s3k.h"
+//#include "s3k/kernel/inc/offsets.h"
 
 #include "heap/canary_trap.h"
+#include "heap/canary.h"
 #include "heap/utils.h"
 
 extern int __canary_metadata_pointer;
 extern int __canaryTable_size;
+
+extern uint8_t __critical_func_start;
+extern uint8_t __critical_func_end;
+
+//Defined in trap.S
+extern void canary_trap(void);
+
 /* CANARY TRAP CODE */
-#define RAM_CAP 2
-#define TRAP_STACK_SIZE 1024
+#define RAM_CAP 2               // Update to RAM_MEM (which is defined in utils.h)
 static char trap_stack[TRAP_STACK_SIZE];
 static uint32_t pmp_cap_idx;
 
-// Look up what this does. Does it tell the linker that this function 
-// will be used as a trap handler and make it store / load all registers on stack?
-void canary_trap_handler(void) __attribute__((interrupt("machine")));
+void canary_trap_handler();
 
 /* 
     Initializes the trap
 */
 void init_canary_trap(){
+
+    //alt_printf("TRAP HANDLER ADDRESS: 0x%x\n", trap_handler);
     // Create the PMP capability
     pmp_cap_idx = find_free_cap();
     uint64_t canary_meta_start  = (uint64_t)&__canary_metadata_pointer;
@@ -33,38 +41,148 @@ void init_canary_trap(){
     }
     lock_canary_metadata();
 	// debug_capability_from_idx(pmp_cap_idx);
-    setup_trap(canary_trap_handler, trap_stack, TRAP_STACK_SIZE);
+    // THIS FUNCTINO ACTIUALLY DOES TAKE ARUGMENTS, BUT WE ARE NOT ALLOWED TO 
+    // DEFINE IT AS SUCH!!!
+    alt_printf("MEMORY LOCATION OF CANARY_TRAP: 0x%x\n", canary_trap);
+    setup_trap(canary_trap, trap_stack, TRAP_STACK_SIZE);
+
+}
+
+// https://www2.eecs.berkeley.edu/Pubs/TechRpts/2016/EECS-2016-118.pdf 
+SD_Instruction parse_sd_instruction(uint32_t data){
+    // We only support C.SD and SD instructions.
+    // There are probably other store instructions
+    // in risc-v, but it would be too much effort to 
+    // support all of them. Hopefully the compiler will 
+    // not randomly start using other types of SD instructions.
+
+    // In riscv, compressed (16 bit) instructions do not have 11 
+    // as the 2 least significant bits.
+    bool is_compressed = (data&3) != 3;
+    SD_Instruction intr;
+    // From page 83 of the manual
+    typedef struct {
+        uint32_t op     : 2;
+        uint32_t rs2    : 3;
+        uint32_t imm1   : 2;
+        uint32_t rs1    : 3;
+        uint32_t imm2   : 3;
+        uint32_t funct3 : 3;
+    } C_SD_Intr;
+    // Page 29
+    typedef struct {
+        uint32_t op     : 7;
+        uint32_t imm1   : 5;
+        uint32_t funct3 : 3;
+        uint32_t rs1    : 5;
+        uint32_t rs2    : 5;
+        uint32_t imm2   : 7;
+    } S_Instr;
+
+
+    if(is_compressed){
+        C_SD_Intr* csd_intr = (C_SD_Intr*)&data;
+        
+        SD_Instruction intr_compressd = {
+            .valid      = csd_intr->op==0?1:0, // C.SD has OP code 0
+            .offset     = csd_intr->imm2<<3 | csd_intr->imm1<<6,
+            .dest_reg   = csd_intr->rs1+8, 
+            .source_reg = csd_intr->rs2+8,
+            .compressed = true,
+        };
+        intr = intr_compressd;
+    }
+    else{
+        S_Instr* s_instr = (S_Instr*)&data;
+
+        SD_Instruction intr_stype = {
+            .valid      = 1, // C.SD has OP code 51?
+            .offset     = s_instr->imm1 | s_instr->imm2 << 5,
+            .dest_reg   = s_instr->rs1, 
+            .source_reg = s_instr->rs2,
+            .compressed = false,
+        };
+        intr = intr_stype;
+    }
+
+    return intr;
+
 }
 
 
-/*
-    When program tries to write to canary, this handler will be invoked.
 
-    Wait, how do should be revert the PMP capablity? The handler will only run one time!
-*/
 void canary_trap_handler(){
-    uint64_t exception_address = s3k_reg_read(S3K_REG_EPC);
-    alt_printf("ERROR: Tried to write to canary metadata without unlocking first at addr: 0x%x\n", exception_address);
-    while(true){};
     /*
-    uint64_t exception_address = s3k_reg_read(S3K_REG_EPC);
+        The registers are saved in order on the stack
+        in the assembly function canary_trap. We obtain a 
+        pointer to it like this: Take initial SP (end of trap stack)
+        and subtrack 512 bytes from it (space reserverd for registers).
+    */
+    volatile uint64_t* reg_ptr = (uint64_t*)trap_stack + (TRAP_STACK_SIZE-512)/sizeof(uint64_t);
+    
+    volatile uint64_t registers[32];
+    for(int i=0; i<32; i++)
+    {
+        registers[i] = reg_ptr[i+1];
+    }
+    
+    volatile uint64_t* exception_address = (uint64_t*)s3k_reg_read(S3K_REG_EPC);
+    
+    // Set to predefined value to verify execution path
+    s3k_reg_write(S3K_REG_EPC, TRAP_EPC_CONSTANT);
+    volatile uint64_t* sp = (uint64_t*)s3k_reg_read(S3K_REG_SP);
+    volatile uint64_t* esp = (uint64_t*)s3k_reg_read(S3K_REG_ESP);
 
-    // For now, assume that this function is 200 bytes large. Will need a better way
-    // of getting its size later. Probably have to do something with linker scripts.
-    uint64_t internal_canary_end_addr = 200 + (uint64_t)internal_add_canary;
-    // Test if caller is allowed to write to the canaries metadata
-    bool is_allowed_to_write = exception_address >= (uint64_t)internal_add_canary && 
-                                exception_address <= internal_canary_end_addr;
+    // Verify that trap was invoked correctly (not directly called)
+    if(esp == 0 || exception_address==0 || sp < trap_stack || sp > trap_stack + TRAP_STACK_SIZE){
+        alt_printf("Error: Trap handler invoked incorrectly, terminating\n");
+        alt_printf("| Exception address: 0x%x\n", exception_address);
+        alt_printf("| SP               : 0x%x\n", sp);
+        alt_printf("| ESP              : 0x%x\n", esp);
+        alt_printf("| Trap stack       : 0x%x\n", trap_stack);
+        while(1){}
+    }
 
-    if(is_allowed_to_write){
-        // Set capability to be writable
-        alt_printf("OPENING PMP LOCK FOR CANARY METADATA \n");
-        open_metadata();
+    uint32_t exception_instruction = (uint32_t)*exception_address;
+    SD_Instruction instr = parse_sd_instruction(exception_instruction);
+    
+    
+
+    uint64_t return_address;
+    if(instr.valid){
+        /* 
+            Check if the caller is allowed to open meta-data
+        */
+        if(exception_address < &__critical_func_start 
+            || exception_address > &__critical_func_end){
+            alt_printf("Illigal Canary Write Attempted From 0x%x\n", exception_address);
+            while(1){}
+        }
+
+        open_canary_metadata();
+        /*for(int i=8; i<24; i++){
+            alt_printf("REG: x%d has value: 0x%x\n", i, registers[i]);
+        }*/
+        // Run the assembly C.SD assembly instrcution
+        volatile uint64_t src_reg_value = registers[instr.source_reg];
+        volatile uint64_t dst_reg_value = registers[instr.dest_reg];
+        volatile uint64_t* target_position = (volatile uint64_t*)(instr.offset + dst_reg_value);
+        *target_position = src_reg_value;
+
+        lock_canary_metadata();
+
+        // Return the EPC to the instruction after the exception
+        // Assume that we only use compressed instructions (2 bytes)
+        return_address = (uint64_t)exception_address + (instr.compressed ? 2 : 4);
+        s3k_reg_write(S3K_REG_EPC, return_address);
     }
     else{
-        alt_printf("NOT ALLOWED TO WRITE TO CANARY METADATA FROM 0x%x\n", exception_address);
+        // Debug print crashed instruction
+        alt_printf("INSTRUCTION POINTER THAT CRASHED: 0x%x\n", exception_address);
+
+        while(1){}
     }
-    */
+
 }
 
 // Sets the metadata to read only
@@ -83,7 +201,12 @@ void lock_canary_metadata(){
 void open_canary_metadata(){
     s3k_err_t err = s3k_pmp_unload(pmp_cap_idx);
     if(err){
-        alt_printf("ERROR: Could not unlock canary metadata pmp region");
+        alt_printf("ERROR: Could not unlock canary metadata pmp region\n");
     }
     s3k_sync_mem();
+    if(s3k_reg_read(S3K_REG_EPC) != TRAP_EPC_CONSTANT){
+        alt_printf("ERROR: Open canary metadata executing from illegal context\n");
+        while(true){}
+    }
+    
 }

@@ -11,14 +11,14 @@ extern int __canary_metadata_pointer;
 
 typedef struct{
     //8 Bytes
-    uint64_t canary;
+    volatile uint64_t canary;
     //8 Bytes
-    uint64_t* heap_canary_pointer;
+    uint64_t* volatile heap_canary_pointer;
 } CanaryObject;
 
 typedef struct {
     //16 Bytes * 256 = 4096
-    CanaryObject entries[CANARY_TABLE_ENTRIES];
+    volatile CanaryObject entries[CANARY_TABLE_ENTRIES];
 } CanaryTable;
 
 
@@ -39,5 +39,4 @@ void init_canary_table();
 
 //Read a CanaryObject from CanaryTable
 void read_canary(uint64_t read_canary);
-
 

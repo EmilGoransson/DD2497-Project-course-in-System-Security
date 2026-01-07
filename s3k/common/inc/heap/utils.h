@@ -44,6 +44,9 @@
 					(((uint64_t) block) << S3K_MIN_BLOCK_SIZE) \
 					)
 
+#define TRAP_STACK_SIZE 2048
+#define INSTRUCTION_SIZE 4
+#define TRAP_EPC_CONSTANT 1
 //Whether to Run APP1 and APP0 on the same core 
 #define RUN_SAME_CORE 1
 
