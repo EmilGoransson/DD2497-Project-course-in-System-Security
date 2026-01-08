@@ -4,7 +4,16 @@ In the projects folder (/s3k/projects), there are 3 example codes of the impleme
 
 Examples:
 -s3k/projects/malloc:
-    --
+    --In app1/main.c (the main application), some information about its use is there.
+    --This project exposes some tests of our implementation.
+        ---The first test (enabled through #defines) is a fragmentation test
+        ---The second test (also enabled through #defines) include several other test that may be intersting. Out of these:
+            ----Test1 checks if the implementation can handle single alloc and free operations in multiple times
+            ----Test2 checks that the created canary is randomly placed (run twice)
+            ----Test3 checks the limit of 25 malloc obejcts and otherwise return null pointer 
+            ----Test4 Shows how use-after-free is detected. Should print "INTEGRITY CHECK FAILED" in the end of this test (program will not finish in this test)
+    --To run the program change directory to s3k/projects/malloc folder and run "make clean && make qemu"
+        ---Chose the #define in the begining of app1/main.c
 
 -s3k/projects/deploying-malloc-example: 
     --A quick example of using our malloc as replacement for the real malloc

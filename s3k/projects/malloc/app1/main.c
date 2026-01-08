@@ -34,25 +34,26 @@ bool test1(){
 	
 	for (size_t i = 0; i < 101; i++)
 	{
-		Rec* dynamic_ints_a = (Rec*) s3k_simple_malloc_random(sizeof(Rec)); 
+		Rec* malloc_object = (Rec*) s3k_simple_malloc_random(sizeof(Rec)); 
 
-		dynamic_ints_a->height = rectangle.height;
-		dynamic_ints_a->lenght = rectangle.lenght;
-		dynamic_ints_a->ratio = rectangle.ratio;
+		malloc_object->height = rectangle.height;
+		malloc_object->lenght = rectangle.lenght;
+		malloc_object->ratio = rectangle.ratio;
 
 		if (i % 100 == 0)	
 		{
-			alt_printf("%d: Heap object\n", i);
-			alt_printf("	rectangle height is: %d\n", dynamic_ints_a->height);
-			alt_printf("	rectangle lenght is: %d\n", dynamic_ints_a->lenght);
-			alt_printf("	rectangle ratio is: %f\n", dynamic_ints_a->ratio);
+			alt_printf("Heap object #%d:\n", i);
+			alt_printf("	rectangle height is: %d\n", malloc_object->height);
+			alt_printf("	rectangle lenght is: %d\n", malloc_object->lenght);
+			alt_printf("	rectangle ratio is: %f\n", malloc_object->ratio);
 		}
-		s3k_simple_free(dynamic_ints_a);
+		s3k_simple_free(malloc_object);
 	}
 	return true;
 }
 
 //Test2: (run whole test twice) is the Canary randomly indexed?
+//This will allocate one object with an associated canary and the canary should be randomly placed within the metadata/canary table
 bool test2(){
 	Rec rectangle ={
 		.height = 10,
@@ -73,13 +74,14 @@ bool test2(){
 	return true;
 }
 
-//Test3: Excedding amount of Malloc objects (only 25)
+//Test3: Excedding amount of Malloc objects 
+//(only 25, one malloc object will always persist so the output should show 24 indexes)
 bool test3(){
 	int size = 50;
 	int* data[size];
 	for (size_t i = 0; i < size; i++)
 	{
-		data[i] = (int*) s3k_simple_malloc_random(4);
+		data[i] = (int*) s3k_simple_malloc_random(1);
 		alt_printf("%d: given address: 0x%x\n", i, data[i]);
 	}
 	for (size_t i = 0; i < size; i++)
@@ -91,7 +93,8 @@ bool test3(){
 	return true;
 }
 
-//Test4: Use-after-free
+//Test4: Use-after-free. 
+//"INTEGRITY CHECK FAILED" is expected behaviour here
 bool test4(){
 	Rec rectangle ={
 		.height = 10,
@@ -100,24 +103,24 @@ bool test4(){
 	};
 
 	//Create a malloc object
-	Rec* dynamic_ints_a = (Rec*) s3k_simple_malloc_random(sizeof(Rec)); 
-	dynamic_ints_a->height = rectangle.height;
-	dynamic_ints_a->lenght = rectangle.lenght;
-	dynamic_ints_a->ratio = rectangle.ratio;
-	s3k_simple_free(dynamic_ints_a);
+	Rec* malloc_object = (Rec*) s3k_simple_malloc_random(sizeof(Rec)); 
+	malloc_object->height = rectangle.height;
+	malloc_object->lenght = rectangle.lenght;
+	malloc_object->ratio = rectangle.ratio;
+	s3k_simple_free(malloc_object);
 
 	//Use a malloc object after it is freed
-	dynamic_ints_a->height = 50;
-	alt_printf("Lenght is: %d\n", dynamic_ints_a->height);
+	malloc_object->height = 50;
+	alt_printf("Changed and read same object: %d\n", malloc_object->height);
 
-	//Overwrite this malloc object and trigger the check
+	//Overwrite this malloc object (eventually) and trigger the check
 	int size = 100;
 	int* data[size];
 	for (size_t i = 0; i < size; i++)
 	{
 		data[i] = (int*) s3k_simple_malloc_random(4);
 	}
-	//TEST should not reach here since use-after-free check will occ
+	//This test should not reach here since use-after-free check will occur
 	for (size_t i = 0; i < size; i++)
 	{
 		alt_printf("%d: ", i);
@@ -126,9 +129,10 @@ bool test4(){
 	}
 	return true;
 }
-	
-	
 
+//Degramentation test
+//Tests allocationg different amount of bytes to see how well malloc performs
+//Performance impact = find big enough space for new malloc object 
 bool test_malloc(){
 	int sizes[] = {100, 100, 1, 99, 69, 1, 69, 1, 69, 1, 69, 0};
 	void* malloc_blocks[sizeof(sizes)/sizeof(sizes[0]) -1];
@@ -173,10 +177,6 @@ int main(void)
 	if(test3()) alt_printf("Passed test3: Excedding amount of malloc objects\n");
 	
 	if(test4()) alt_printf("Passed test4: Use-after-free\n");
-	//memset(dynamic_ints_a, 0, 16); // Artificiall buffer overflow
-    // alt_printf("Canary metadata pointer 0x%x\n", &__canary_metadata_pointer);
-	//To view the CanaryTable info
-	//size((CanaryTable*)0x80023000);
 #endif
 	alt_printf("--- Ran All Tests ---\n\n");
 	print_malloc_debug_info("--- Malloc Heap Blocks After Tests ---");

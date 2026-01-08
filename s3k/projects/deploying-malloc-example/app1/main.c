@@ -37,4 +37,7 @@ int main(void)
 
 	//Release the heap object
 	s3k_simple_free((void*)heap_rectangle);
+
+	//Finished
+	alt_printf("END\n");
 }
