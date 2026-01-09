@@ -154,6 +154,13 @@ int remove_canary(uint64_t* canary_adress){
         }
     }
 
+    // Verify that that it has not been overwritten
+    // otherwise the it might be removed before the monitor
+    // could detect it
+    if(*canary_adress != canarytable.entries[i].canary){
+        return 1;
+    }
+
     canarytable.entries[i].heap_canary_pointer = (uint64_t*) 0;
     active_canaries--;
 
