@@ -1,0 +1,119 @@
+#include "altc/altio.h"
+#include "s3k/s3k.h"
+#include <string.h>
+
+#include "heap/utils.h"
+#include "heap/malloc.h"
+#include "heap/canary.h"
+
+extern int __canary_metadata_pointer;
+
+void monitor_app1(){
+	// Get the offset of the canary table for app0
+	uint64_t canary_table_offset = (uint64_t)&__canary_metadata_pointer - APP0_BASE_ADDR;
+	
+	// Get app1's canary table location
+	CanaryTable* app1_canary_table = (CanaryTable*)(APP1_BASE_ADDR + canary_table_offset);
+
+	bool same_canary = check_canary(app1_canary_table);
+	if(!same_canary){
+		alt_printf("Canary check failed! Buffer overflow detected in app1's canary table\n");
+
+		// Suspends overflown app
+		s3k_mon_suspend(MONITOR, APP1_PID);
+		
+		// Stop monitoring.
+		while(1){} 
+	}
+}
+
+void setup_apps()
+{
+	uint64_t uart_addr = s3k_napot_encode(UART0_BASE_ADDR, 0x8);
+	// Address regions for each app
+	uint64_t app1_addr = s3k_napot_encode(APP1_BASE_ADDR, APP1_LENGHT);
+	uint64_t app1_text_mem = s3k_napot_encode(APP1_BASE_ADDR, 4096);
+
+	// MEMORY and PMP
+	// Derive memory for APP1 
+	
+	// Create a memory segment for APP1 (APP1)
+	uint32_t mem_free_cap_idx = find_free_cap();
+	s3k_err_t mon_checking_err1 = s3k_cap_derive(RAM_MEM, mem_free_cap_idx, s3k_mk_memory(APP1_BASE_ADDR, APP1_BASE_ADDR + APP1_LENGHT, S3K_MEM_RWX));
+	
+	// Derive a PMP capability for the newly derive app1 main memory (APP1)
+	uint32_t free_cap_idx = find_free_cap();
+	s3k_err_t a1 = s3k_cap_derive(mem_free_cap_idx, free_cap_idx, s3k_mk_pmp(app1_addr, S3K_MEM_RWX));
+	// [We make a copy of this pmp for APP0 (APP0)]
+	uint32_t app0_cap_idx = find_free_cap();
+	s3k_err_t app0_a1 = s3k_cap_derive(mem_free_cap_idx, app0_cap_idx, s3k_mk_pmp(app1_addr, S3K_MEM_RX));
+	// [Finally load the pmp after the first pmp (BOOT_PMP) for APP0 (APP0)]
+	s3k_pmp_load(app0_cap_idx, 2);
+	//Also send and load the pmp in PID1
+	s3k_err_t a2 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 0);
+	s3k_err_t a3 = s3k_mon_pmp_load(MONITOR, APP1_PID, 0, 7);
+	
+	// Make .text non writable (must have higher priority ==> lower id than RWX pmp) (APP1)
+	s3k_cap_derive(mem_free_cap_idx, free_cap_idx, s3k_mk_pmp(app1_text_mem, S3K_MEM_RX));
+	s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 4);
+	s3k_mon_pmp_load(MONITOR, APP1_PID, 4, 6);
+	
+	// Send memory AFTER pmp over of the same region as been created (APP1)
+	s3k_mon_cap_move(MONITOR, APP0_PID, mem_free_cap_idx, APP1_PID, 2);
+
+	/*
+		We reserve PMP slot 0 for the canary metadata section.
+		A better way would be to allocate PMP slots high-->low
+		so that subsections can have higher priority (lower slot).
+	*/
+	
+
+	// Derive a PMP capability for uart (APP1)
+	s3k_err_t b1 = s3k_cap_derive(UART_MEM, free_cap_idx, s3k_mk_pmp(uart_addr, S3K_MEM_RW));
+	s3k_err_t b2 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 1);
+	s3k_err_t b3 = s3k_mon_pmp_load(MONITOR, APP1_PID, 1, 3);
+
+
+	// TIME
+	// derive a time slice capability from APP1's time (HART1) 
+	// On one core (HART0) will app0 and app1 where APP1 75% of time and APP0 25% of time
+	s3k_cap_delete(HART1_TIME); 		// Not using core 2
+	s3k_cap_delete(HART2_TIME); 		// Not using core 3
+	s3k_cap_delete(HART3_TIME);			// Not using core 4
+
+	free_cap_idx = find_free_cap();
+	if(RUN_SAME_CORE){
+		// Derive new time slice for app1
+		s3k_cap_derive(HART0_TIME, free_cap_idx, s3k_mk_time(0, 0, (3 * S3K_SLOT_CNT) / 4));
+
+		// Move the derived time slices to app1
+		s3k_err_t c1 = s3k_mon_cap_move(MONITOR, APP0_PID, free_cap_idx, APP1_PID, 3);
+	}
+	else{
+		//Run APP1 on own core
+		s3k_mon_cap_move(MONITOR, APP0_PID, HART1_TIME, APP1_PID, 3);
+	}
+	// And sync the times (as tutorial.04 does)
+	s3k_sync();
+
+	// Write start PC of app1 to PC
+	s3k_mon_reg_write(MONITOR, APP1_PID, S3K_REG_PC, APP1_BASE_ADDR);
+
+	// Start app1
+	s3k_mon_resume(MONITOR, APP1_PID);
+}
+
+int main(void)
+{
+	// Setup UART access
+	setup_uart_app0();
+	alt_printf("hello from app0\n");
+
+	setup_apps();
+	
+	while(1){
+		monitor_app1();
+	}
+
+	alt_printf("leaving app0\n");
+}

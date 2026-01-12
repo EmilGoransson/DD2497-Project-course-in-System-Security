@@ -7,8 +7,6 @@ extern int __canary_metadata_pointer;
 
 #define CANARY_TABLE_ENTRIES 256
 
-#define USE_TRAP 1
-
 typedef struct{
     //8 Bytes
     volatile uint64_t canary;

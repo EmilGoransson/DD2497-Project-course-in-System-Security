@@ -4,30 +4,35 @@ In the projects folder (/s3k/projects), there are 3 example codes of the impleme
 
 Examples:
 -s3k/projects/malloc:
-    --In app1/main.c (the main application), some information about its use is there.
+    --In app1/main.c
     --This project exposes some tests of our implementation.
-        ---The first test (enabled through #defines) is a fragmentation test
-        ---The second test (also enabled through #defines) include several other test that may be intersting. Out of these:
+        ---The test include several tests that may be intersting. Out of these:
             ----Test1 checks if the implementation can handle single alloc and free operations in multiple times
             ----Test2 checks that the created canary is randomly placed (run twice)
             ----Test3 checks the limit of 25 malloc obejcts and otherwise return null pointer 
             ----Test4 Shows how use-after-free is detected. Should print "INTEGRITY CHECK FAILED" in the end of this test (program will not finish in this test)
     --To run the program change directory to s3k/projects/malloc folder and run "make clean && make qemu"
-        ---Chose the #define in the begining of app1/main.c
+
+-s3k/projects/malloc_fragmentation:
+    --A test that calls malloc and free many times, showing that
+        the fragmentation is not too bad, and that malloc works.
+    --To run the program, change to the folder, and run make clean && make qemu
+    --The program should say that all 100 tests succeded and print out a representation
+        of the heap metadata after all the tests.
 
 -s3k/projects/deploying-malloc-example: 
     --A quick example of using our malloc as replacement for the real malloc
     --To run the program change directory to s3k/projects/deploying-malloc-example folder and run "make clean && make qemu"
 
 -s3k/project/malloc_exploit
-    --Purpose of this test is to show how the trap handler prevents modifying a region of memory
-        that shouldn't be accessable. Preventing modifications to the canary_table.
-    --Before running it ensure that you clean all build files inside the s3k folder and the s3k/project/malloc_exploit folder: 
-        "make clean"
-    --To run with or without the trap handler, ensure that the macro USE_TRAP is defined as 0 for without and as 1 for with it.
-        The macro is defined inside s3k/common/inc/heap/canary.h
-        "#define USE_TRAP 0" or "#define USE_TRAP 1"
-    --To run the program just initlize it inside the malloc_exploit folder:
-        "make qemu"
+    --Purpose of this test is to show how the trap handler prevents modifying a the canary metadata
+        section that shouldn't be accessable. Preventing modifications to the canary_table.
+    --A define can be changed to either try to write to the metadata, or to just perform a buffer overflow.
+        If the writing to the metadata, the program is expected to stop running and print:
+        "Illigal Canary Write Attempted From". If it is not used, it is expected to detect the buffer overflow
+        and print: "Canary check failed! Buffer overflow detected in app1's canary table".
+        The define is called WRITE_TO_CANARY_METADATA and is located in app1's main.c file.
+    --To run the program just runthe following inside the malloc_exploit folder:
+        "make clean && make qemu"
 
 
